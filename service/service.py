@@ -32,13 +32,14 @@ def connect_to_rabbitmq():
 def on_message(channel, method, properties, body):
     """Callback function to process received messages."""
     logging.info(f"Received message: {body.decode()}")
+    logging.info("Sleeping...")
+    time.sleep(1)
     # Acknowledge the message to remove it from the queue
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
 def main():
     """Main function to set up RabbitMQ consumer."""
     logging.basicConfig(level=logging.INFO)
-    print("hello")
 
     connection = connect_to_rabbitmq()
     channel = connection.channel()
@@ -46,7 +47,7 @@ def main():
     queue_name = 'message-queue'
 
     # Declare a durable queue directly (no exchange needed)
-    channel.queue_declare(queue=queue_name, arguments={
+    channel.queue_declare(queue=queue_name, durable=True, arguments={
         "x-max-length": 100
     })
 

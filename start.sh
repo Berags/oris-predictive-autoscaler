@@ -1,5 +1,6 @@
 kubectl delete deployment/rabbitmq -n oris-predictive-autoscaler
 kubectl delete pvc rabbitmq-pvc -n oris-predictive-autoscaler
+kubectl delete deployment/python-service -n oris-predictive-autoscaler --ignore-not-found=true
 kubectl apply -f k8s/rabbitmq.yaml -n oris-predictive-autoscaler
 kubectl rollout status deployment/rabbitmq -n oris-predictive-autoscaler
 
@@ -7,7 +8,7 @@ kubectl rollout status deployment/rabbitmq -n oris-predictive-autoscaler
 kubectl apply -f k8s/namespace.yaml
 
 # Build the Service Docker Image
-docker build -t oris-python-service:latest ./service/
+docker build --no-cache -t oris-python-service:latest ./service/
 
 # Load the Docker image into Minikube
 minikube image load oris-python-service:latest

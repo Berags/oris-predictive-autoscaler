@@ -20,6 +20,8 @@ spec:
         image: oris-python-service:latest
         imagePullPolicy: IfNotPresent
         env:
+        - name: PYTHONUNBUFFERED
+          value: "1"        
         - name: RABBITMQ_HOST
           value: "rabbitmq-service"
         - name: RABBITMQ_USER
