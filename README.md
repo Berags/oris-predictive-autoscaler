@@ -17,6 +17,7 @@
 └── k8s/
     ├── namespace.yaml      # Kubernetes Namespace for cluster
     ├── rabbitmq.yaml       # Deployment for RabbitMQ
+    ├── kafka.yaml          # Deployment for Kafka
     └── python-service.yaml # Deployment for dummy service
 ```
 
