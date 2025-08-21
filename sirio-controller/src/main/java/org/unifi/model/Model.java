@@ -21,7 +21,7 @@ public class Model{
     private PetriNet pn;
     private Marking m;
 
-    public Model(ArrivalProcess arrival, Queue queue, ServiceProcess service){
+    public Model(ArrivalProcess arrival, Queue queue, ServiceProcess service, boolean serviceScale){
         this.arrival = arrival;
         this.queue = queue;
         this.service = service;
@@ -31,12 +31,19 @@ public class Model{
         
         arrivalTransition = arrival.generateModel(pn, m);
         queuePlace = queue.generateModel(pn, m);
+        if(serviceScale){
+            service.scaleOn(queuePlace);
+        }
         serviceTransition = service.generateModel(pn, m);
         
         pn.addPostcondition(arrivalTransition, queuePlace);
         pn.addPrecondition(queuePlace, serviceTransition);
+
     }
 
+    public Model(ArrivalProcess arrival, Queue queue, ServiceProcess service){
+        this(arrival, queue, service, false);
+    }
     public BigDecimal evaluateRejectionRate(){
         BigDecimal rejection = BigDecimal.ZERO;
         Map<Marking, BigDecimal> results = RegSteadyState.builder().build().compute(pn, m).getSteadyState();

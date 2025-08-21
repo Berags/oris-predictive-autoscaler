@@ -36,9 +36,7 @@ public class APHArrivalProcess implements ArrivalProcess{
             Transition exponentialIter = pn.addTransition(prefix + i);
             
             pn.addPrecondition(placeIter, exponentialIter);
-            System.out.println(BigDecimal.valueOf(i));
             exponentialIter.addFeature(StochasticTransitionFeature.newExponentialInstance(BigDecimal.valueOf(i)));
-            System.out.println(exponentialIter.getFeature(StochasticTransitionFeature.class).clockRate().evaluate(m));
 
             Transition immediateIter = pn.addTransition(prefix + "imm" + i);
             pn.addPrecondition(ready, immediateIter);
