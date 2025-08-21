@@ -6,6 +6,7 @@ import org.oristool.petrinet.PetriNet;
 import org.oristool.petrinet.Marking;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
 import org.oristool.models.stpn.steady.RegSteadyState;
+import org.oristool.math.function.EXP;
 import java.util.Map;
 import java.math.BigDecimal;
 
@@ -42,10 +43,19 @@ public class Model{
         for(Marking tmp: results.keySet()){
             if(tmp.getTokens(queuePlace) == queue.getSize() && pn.isEnabled(arrivalTransition, tmp)){
                 rejection = rejection.add(results.get(tmp));
-                rejection = rejection.multiply(BigDecimal.valueOf(arrivalTransition.getFeature(StochasticTransitionFeature.class).clockRate().evaluate(tmp)));
+                rejection = rejection.multiply(extractLambda(arrivalTransition));
             }
         }
         return rejection;
     }
+
+    private BigDecimal extractLambda(Transition t){
+        StochasticTransitionFeature st = t.getFeature(StochasticTransitionFeature.class);
+        if(!st.isEXP()){
+            throw new IllegalArgumentException("Give a Exponential transition feature");
+        }
+        return ((EXP) st.density()).getLambda();
+    }
+
 }
 
