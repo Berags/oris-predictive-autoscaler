@@ -7,7 +7,7 @@ kubectl rollout status deployment/rabbitmq -n oris-predictive-autoscaler
 kubectl apply -f k8s/namespace.yaml
 
 # Build the Service Docker Image
-docker build --no-cache -t oris-python-service:latest ./service/
+docker build -t oris-python-service:latest ./service/
 
 # Load the Docker image into Minikube
 minikube image load oris-python-service:latest
@@ -27,10 +27,11 @@ echo "Waiting for pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=rabbitmq -n oris-predictive-autoscaler --timeout=120s
 
 echo "Exposing services..."
-echo "RabbitMQ Management UI will be available at: http://localhost:15672 (admin/password)"
+echo "RabbitMQ Management UI will be available at: http://localhost:15672"
 
 # Expose services (run in background)
 kubectl port-forward service/rabbitmq-service 15672:15672 -n oris-predictive-autoscaler &
+kubectl port-forward service/rabbitmq-service 5672:5672 -n oris-predictive-autoscaler &
 
 echo "Port forwarding started. Press Ctrl+C to stop all services."
 wait

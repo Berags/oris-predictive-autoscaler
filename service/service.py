@@ -46,7 +46,7 @@ def main():
     queue_name = 'message-queue'
 
     # Declare a durable queue directly (no exchange needed)
-    channel.queue_declare(queue=queue_name, durable=True, arguments={
+    channel.queue_declare(queue=queue_name, arguments={
         "x-max-length": 100
     })
 

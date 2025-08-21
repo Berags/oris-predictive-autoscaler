@@ -26,8 +26,6 @@ data:
         {
           "name": "message-queue",
           "vhost": "/",
-          "durable": true,
-          "auto_delete": false,
           "arguments": {
             "x-max-length": 100
           }
