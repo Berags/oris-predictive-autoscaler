@@ -43,10 +43,12 @@ def main():
     connection = connect_to_rabbitmq()
     channel = connection.channel()
 
-    queue_name = 'limited-queue'
+    queue_name = 'message-queue'
 
     # Declare a durable queue directly (no exchange needed)
-    channel.queue_declare(queue=queue_name, durable=True)
+    channel.queue_declare(queue=queue_name, durable=True, arguments={
+        "x-max-length": 100
+    })
 
     logging.info(f"Waiting for messages on queue '{queue_name}'. To exit press CTRL+C")
     print("Waiting for messages...")

@@ -1,3 +1,8 @@
+kubectl delete deployment/rabbitmq -n oris-predictive-autoscaler
+kubectl delete pvc rabbitmq-pvc -n oris-predictive-autoscaler
+kubectl apply -f k8s/rabbitmq.yaml -n oris-predictive-autoscaler
+kubectl rollout status deployment/rabbitmq -n oris-predictive-autoscaler
+
 # Create the namespace
 kubectl apply -f k8s/namespace.yaml
 

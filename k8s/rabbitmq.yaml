@@ -10,6 +10,58 @@ spec:
     requests:
       storage: 5Gi
 ---
+# ConfigMap con le definizioni per creare la coda "message-queue" limitata a 100 messaggi
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-definitions
+  namespace: oris-predictive-autoscaler
+data:
+  definitions.json: |
+    {
+      "vhosts": [
+        { "name": "/" }
+      ],
+      "queues": [
+        {
+          "name": "message-queue",
+          "vhost": "/",
+          "durable": true,
+          "auto_delete": false,
+          "arguments": {
+            "x-max-length": 100
+          }
+        }
+      ],
+      "users": [
+        {
+          "name": "admin",
+          "password": "password",
+          "tags": ["administrator"]
+        }
+      ],
+      "permissions": [
+        {
+          "user": "admin",
+          "vhost": "/",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        }
+      ]
+    }
+---
+# ConfigMap per configurazione RabbitMQ: carica le definizioni al bootstrap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: oris-predictive-autoscaler
+data:
+  rabbitmq.conf: |
+    # Indica al management plugin di importare il file delle definizioni
+    management.load_definitions = /etc/rabbitmq/definitions.json
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,6 +95,12 @@ spec:
         volumeMounts:
         - name: rabbitmq-data
           mountPath: /var/lib/rabbitmq
+        - name: rabbitmq-definitions
+          mountPath: /etc/rabbitmq/definitions.json
+          subPath: definitions.json
+        - name: rabbitmq-config
+          mountPath: /etc/rabbitmq/rabbitmq.conf
+          subPath: rabbitmq.conf
         resources:
           requests:
             memory: "256Mi"
@@ -54,6 +112,12 @@ spec:
       - name: rabbitmq-data
         persistentVolumeClaim:
           claimName: rabbitmq-pvc
+      - name: rabbitmq-definitions
+        configMap:
+          name: rabbitmq-definitions
+      - name: rabbitmq-config
+        configMap:
+          name: rabbitmq-config
 ---
 apiVersion: v1
 kind: Service
