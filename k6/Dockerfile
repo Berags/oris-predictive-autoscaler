@@ -10,4 +10,9 @@ RUN xk6 build --output /k6 --with github.com/grafana/xk6-amqp@latest
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /k6 /usr/bin/k6
+
+RUN mkdir -p /k6/lib
+COPY lib/ /k6/lib/
+
+WORKDIR /k6
 ENTRYPOINT ["k6"]
