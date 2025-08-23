@@ -8,19 +8,25 @@ import java.lang.Math;
 public class ArrivalProcessFactory{
 
     public static ExponentialArrivalProcess generateExponential(Distribution f){
-        return new ExponentialArrivalProcess(BigDecimal.valueOf(f.getMean()));
+        return new ExponentialArrivalProcess(BigDecimal.valueOf(1 / f.getMean()));
     }
 
     public static APHArrivalProcess generateBPH(Distribution f, int n){
+        return new APHArrivalProcess(ArrivalProcessFactory.bernsteinValuesCDF(f, n));
+    }
+
+    public static List<BigDecimal> bernsteinValuesCDF(Distribution f, int n){
         if(n <= 0){
             throw new IllegalArgumentException("To generate a Phase Type using the Bernstein Exponetial it's needed at least n >= 1");
         }
         ArrayList<BigDecimal> bernsteinValues = new ArrayList<BigDecimal>();
         double previous = 1;
         for(int i = 0; i < n; i++){
-            bernsteinValues.add(BigDecimal.valueOf(previous - f.getCDFValue(Math.log(n/ (i + 1)))));
+            double current = f.getCDFValue(Math.log(((double) n) / (i + 1)));
+            bernsteinValues.add(BigDecimal.valueOf(previous - current));
+            previous = current;
         }
-        return new APHArrivalProcess(bernsteinValues);
+        return bernsteinValues;
     }
 
 }

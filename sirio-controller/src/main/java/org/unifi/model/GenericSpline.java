@@ -13,13 +13,11 @@ public class GenericSpline implements Distribution{
     private double mean;
     private double epsilon = 0.000001;
     
-    public static GenericSpline buildByCDF(List<Double> x, List<Double> y){
-        GenericSpline gs = new GenericSpline();
-        gs.setCDF(x, y);
-        return gs;
+    public static GenericSplineBuilder builder(){
+        return new GenericSplineBuilder();
     }
 
-    private void setCDF(List<Double> x, List<Double> y){
+    void setCDF(List<Double> x, List<Double> y){
         if(x.size() != y.size()){
             throw new IllegalArgumentException("The two lists doesn't have the same size");
         }
@@ -38,7 +36,7 @@ public class GenericSpline implements Distribution{
         this.yCDF = new ArrayList(y);
     }
 
-    private void setPDF(List<Double> x, List<Double> y){
+    void setPDF(List<Double> x, List<Double> y){
         if(x.size() != y.size()){
             throw new IllegalArgumentException("The two lists doesn't have the same size");
         }
@@ -54,7 +52,7 @@ public class GenericSpline implements Distribution{
         this.yPDF = new ArrayList(y);
     }
 
-    private void setMean(double mean){
+    void setMean(double mean){
         this.mean = mean;
     }
 
@@ -87,24 +85,5 @@ public class GenericSpline implements Distribution{
             }
         }
         return 0;
-    }
-
-    public class GenericSplineBuilder{
-        GenericSpline gs = new GenericSpline();
-
-        public GenericSpline CDF(List<Double> x, List<Double> y){
-            gs.setCDF(x, y);
-            return gs;
-        }
-
-        public GenericSpline PDF(List<Double> x, List<Double> y){
-            gs.setPDF(x, y);
-            return gs;
-        }
-        
-        public GenericSpline mean(double mean){
-            gs.setMean(mean);
-            return gs;
-        }
     }
 }
