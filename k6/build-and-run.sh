@@ -10,13 +10,19 @@ RABBITMQ_USER="${RABBITMQ_USER:-admin}"
 RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-password}"
 RABBITMQ_PORT="${RABBITMQ_PORT:-5672}"
 TEST_DURATION="${TEST_DURATION:-60s}"
-LAMBDA="${LAMBDA:-10}"  # Default arrival rate (messages per second)
+LAMBDA="${LAMBDA:-50}"  # Default arrival rate (messages per second)
 DISTRIBUTION="${DISTRIBUTION:-poisson}"  # Default distribution
 
 
 if ! command -v docker >/dev/null 2>&1; then
     echo "Docker not found" >&2
     exit 1
+fi
+
+# Create lib directory and clone probability-distributions-k6 if not exists
+if [ ! -d "$SCRIPT_DIR/lib" ]; then
+    mkdir -p "$SCRIPT_DIR/lib"
+    git clone --depth 1 https://github.com/pedromoritz/probability-distributions-k6.git "$SCRIPT_DIR/lib/"
 fi
 
 echo "[1/2] Building image ${IMAGE_NAME}..."

@@ -10,7 +10,6 @@ spec:
     requests:
       storage: 5Gi
 ---
-# ConfigMap con le definizioni per creare la coda "message-queue" limitata a 100 messaggi
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -49,17 +48,6 @@ data:
       ]
     }
 ---
-# ConfigMap per configurazione RabbitMQ: carica le definizioni al bootstrap
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rabbitmq-config
-  namespace: oris-predictive-autoscaler
-data:
-  rabbitmq.conf: |
-    # Indica al management plugin di importare il file delle definizioni
-    management.load_definitions = /etc/rabbitmq/definitions.json
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -85,11 +73,8 @@ spec:
           name: amqp
         - containerPort: 15672
           name: management
-        env:
-        - name: RABBITMQ_DEFAULT_USER
-          value: "admin"
-        - name: RABBITMQ_DEFAULT_PASS
-          value: "password"
+        - containerPort: 15692
+          name: prometheus
         volumeMounts:
         - name: rabbitmq-data
           mountPath: /var/lib/rabbitmq
@@ -99,6 +84,9 @@ spec:
         - name: rabbitmq-config
           mountPath: /etc/rabbitmq/rabbitmq.conf
           subPath: rabbitmq.conf
+        - name: rabbitmq-plugins
+          mountPath: /etc/rabbitmq/enabled_plugins
+          subPath: enabled_plugins
         resources:
           requests:
             memory: "256Mi"
@@ -114,6 +102,9 @@ spec:
         configMap:
           name: rabbitmq-definitions
       - name: rabbitmq-config
+        configMap:
+          name: rabbitmq-config
+      - name: rabbitmq-plugins
         configMap:
           name: rabbitmq-config
 ---
@@ -135,5 +126,9 @@ spec:
     targetPort: 15672
     protocol: TCP
     name: management
+  - port: 15692
+    targetPort: 15692
+    protocol: TCP
+    name: prometheus
   selector:
     app: rabbitmq

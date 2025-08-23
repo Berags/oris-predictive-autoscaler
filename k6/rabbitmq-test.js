@@ -59,7 +59,7 @@ export function poissonProcess() {
     console.log(`Starting Poisson process with λ=${LAMBDA} for duration: ${TEST_DURATION}`);
     
     // Pre-generate a batch of exponential inter-arrival times for efficiency
-    const BATCH_SIZE = 1000;
+    const BATCH_SIZE = 1;
     let interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, LAMBDA);
     let batchIndex = 0;
     

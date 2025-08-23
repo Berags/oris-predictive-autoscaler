@@ -66,3 +66,8 @@ chmod +x k6/build-and-run.sh
 # start the cluster
 ./k6/build-and-run.sh
 ```
+
+## Graphana Query
+```
+rate(rabbitmq_global_messages_received_total{}[$__rate_interval])
+```
