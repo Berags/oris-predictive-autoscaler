@@ -9,8 +9,8 @@ RABBITMQ_HOST="${RABBITMQ_HOST:-localhost}"
 RABBITMQ_USER="${RABBITMQ_USER:-admin}"
 RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-password}"
 RABBITMQ_PORT="${RABBITMQ_PORT:-5672}"
-TEST_DURATION="${TEST_DURATION:-60s}"
-LAMBDA="${LAMBDA:-50}"  # Default arrival rate (messages per second)
+TEST_DURATION="${TEST_DURATION:-600s}"
+LAMBDA="${LAMBDA:-10}"  # Default arrival rate (messages per second)
 DISTRIBUTION="${DISTRIBUTION:-poisson}"  # Default distribution
 
 

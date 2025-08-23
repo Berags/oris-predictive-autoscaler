@@ -23,10 +23,7 @@ spec:
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-dashboards
           mountPath: /etc/grafana/provisioning/dashboards
-        env:  # Aggiungi questa sezione
-        - name: GF_DASHBOARDS_MIN_REFRESH_INTERVAL
-          value: "1s"  # O "500ms" per mezzo secondo
-
+        
       volumes:
       - name: grafana-datasources
         configMap:

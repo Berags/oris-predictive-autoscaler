@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: prometheus
-        image: prom/prometheus:v2.37.0
+        image: prom/prometheus:v3.5.0
         args:
           - "--config.file=/etc/prometheus/prometheus.yml"
           - "--storage.tsdb.path=/prometheus/"
@@ -59,3 +59,9 @@ data:
       - job_name: 'rabbitmq'
         static_configs:
           - targets: ['rabbitmq-service:15692']
+
+      - job_name: 'k6-metrics'  # ← AGGIUNGI QUESTO
+        static_configs:
+          - targets: ['host.docker.internal:6565']  # K6 metrics endpoint
+        metrics_path: /metrics
+        scrape_interval: 5s
