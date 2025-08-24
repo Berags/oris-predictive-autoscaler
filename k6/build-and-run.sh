@@ -9,7 +9,7 @@ RABBITMQ_HOST="${RABBITMQ_HOST:-localhost}"
 RABBITMQ_USER="${RABBITMQ_USER:-admin}"
 RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-password}"
 RABBITMQ_PORT="${RABBITMQ_PORT:-5672}"
-TEST_DURATION="${TEST_DURATION:-600s}"
+TEST_DURATION="${TEST_DURATION:-200s}"
 LAMBDA="${LAMBDA:-10}"  # Default arrival rate (messages per second)
 DISTRIBUTION="${DISTRIBUTION:-poisson}"  # Default distribution
 
@@ -22,6 +22,8 @@ fi
 # Create lib directory and clone probability-distributions-k6 if not exists
 if [ ! -d "$SCRIPT_DIR/lib" ]; then
     mkdir -p "$SCRIPT_DIR/lib"
+fi
+if [ ! -d "$SCRIPT_DIR/lib/probability-distributions-k6" ]; then
     git clone --depth 1 https://github.com/pedromoritz/probability-distributions-k6.git "$SCRIPT_DIR/lib/"
 fi
 
