@@ -1,35 +1,3 @@
-/**
- * k6 load script that publishes messages to a RabbitMQ queue following either:
- *  1. A constant arrival rate using the built‑in k6 'constant-arrival-rate' executor, or
- *  2. A stochastic inter‑arrival process (currently Poisson exponential) implemented manually
- *     inside a per-VU loop ("stochasticProcess") so we can validate properties (mean / variance)
- *     of the generated inter‑arrival times against the theoretical λ parameter.
- *
- * Environment variables (defaults in parentheses):
- *  - RABBITMQ_HOST (localhost)
- *  - RABBITMQ_PORT (5672)
- *  - RABBITMQ_USER (admin)
- *  - RABBITMQ_PASSWORD (password)
- *  - LAMBDA  (10)  -> target arrival rate (messages / second)
- *  - TEST_DURATION (30s) -> duration accepted by k6 executors (e.g. 30s, 2m, 1h)
- *  - DISTRIBUTION (constant|poisson) -> arrival process type
- *
- * Metrics exported:
- *  - poisson_intervals (Trend): raw inter‑arrival samples (seconds)
- *  - actual_rate (Trend): rolling estimate of achieved arrival rate (1 / mean recent interval)
- *  - lambda_verification_samples (Counter): count of intervals sampled (for stochastic mode)
- *
- * Two execution modes (scenarios):
- *  - constant_arrivals  -> automatic pacing handled by k6 executor (accurate global rate)
- *  - stochastic_arrivals -> we explicitly draw inter‑arrival times and sleep(dt) (good for
- *                           validating statistical properties, but rate accuracy depends on
- *                           scheduling & execution latency)
- *
- * Implementation notes:
- *  - Welford's online algorithm is used for a numerically stable running mean/variance.
- *  - A small sliding window estimates instantaneous rate (recent 100 samples by default).
- *  - Additional distributions (normal, uniform) are scaffolded but require MU/SIGMA/etc.
- */
 import amqp from 'k6/x/amqp';
 import queue from 'k6/x/amqp/queue';
 import { sleep } from 'k6';
@@ -42,7 +10,7 @@ const RABBITMQ_USER = __ENV.RABBITMQ_USER || 'admin';
 const RABBITMQ_PASSWORD = __ENV.RABBITMQ_PASSWORD || 'password';
 const QUEUE_NAME = 'message-queue';
 
-// Test parameters (rate λ expressed in messages per second)
+// Test parameters. They are rewritten in the .sh
 const LAMBDA = parseFloat(__ENV.LAMBDA) || 10; // arrival rate per second
 const TEST_DURATION = __ENV.TEST_DURATION || '30s';
 const DISTRIBUTION = __ENV.DISTRIBUTION || 'constant'; // 'constant' or 'poisson'
@@ -51,71 +19,37 @@ const AMQP_URL = `amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:
 console.log(`RabbitMQ connection: ${AMQP_URL}`);
 console.log(`Test distribution: ${DISTRIBUTION}, λ=${LAMBDA} arrivals/sec, duration: ${TEST_DURATION}`);
 
-// Metrics for λ (lambda) verification & monitoring of stochastic arrivals
+// Metrics for lambda verification
 const intervalTrend = new Trend('poisson_intervals');
 const actualRateTrend = new Trend('actual_rate');
 const lambdaVerificationCounter = new Counter('lambda_verification_samples');
 
-// Build k6 scenarios dynamically based on desired distribution.
-// constant: rely on constant-arrival-rate executor
-// stochastic: single VU that self-paces using sampled inter-arrivals
-const createScenarios = () => {
-    if (DISTRIBUTION === 'constant') {
-        return {
-            constant_arrivals: {
-                executor: 'constant-arrival-rate',
-                rate: LAMBDA,
-                timeUnit: '1s',
-                duration: TEST_DURATION,
-                preAllocatedVUs: 10,
-                maxVUs: 50,
-                exec: 'constantSend'
-            }
-        };
-    }
-    return {
-        stochastic_arrivals: {
+export const options = {
+    scenarios: DISTRIBUTION === 'poisson' ? {
+        poisson_arrivals: {
             executor: 'per-vu-iterations',
             vus: 1,
-            iterations: 1,
+            iterations: 1, 
             maxDuration: TEST_DURATION,
-            exec: 'stochasticProcess'
+            exec: 'poissonProcess'
         }
-    };
-}
-
-export const options = { scenarios: createScenarios() };
-
-const connID = amqp.start({ connection_url: AMQP_URL });
-
-// Collection of inter-arrival time generators (seconds).
-// NOTE: Only 'poisson' is currently parameterized via λ; others are placeholders needing
-// MU / SIGMA / UNIFORM_{MIN,MAX} definitions if used.
-const distributionGenerators = {
-    poisson: () => probabilityDistributions.rexp(1, LAMBDA)[0],
-    normal: () => {
-        while (true) {
-            const v = probabilityDistributions.rnorm
-                ? probabilityDistributions.rnorm(1, MU, SIGMA)[0]
-                : (() => {
-                    const u1 = Math.random(), u2 = Math.random();
-                    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-                    return MU + SIGMA * z;
-                })();
-            if (v > 0) return v;
+    } : {
+        constant_arrivals: {
+            executor: 'constant-arrival-rate',
+            rate: LAMBDA,
+            timeUnit: '1s',
+            duration: TEST_DURATION,
+            preAllocatedVUs: 10,
+            maxVUs: 50,
+            exec: 'constantSend'
         }
-    },
-    uniform: () => {
-        const v = UNIFORM_MIN + Math.random() * (UNIFORM_MAX - UNIFORM_MIN);
-        return v > 0 ? v : 1 / LAMBDA;
     }
 };
 
+const connID = amqp.start({ connection_url: AMQP_URL });
 
-// Lambda verification function (unused in current logging loop but retained for potential
-// batch evaluation). Given a list of sampled inter-arrival times, compare empirical mean &
-// variance against the theoretical exponential distribution (mean=1/λ, var=1/λ²).
-const verifyLambda = (intervals, expectedLambda) =>{
+// Lambda verification function
+function verifyLambda(intervals, expectedLambda) {
     if (intervals.length < 100) return null; // Need minimum samples
     
     const mean = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
@@ -139,6 +73,7 @@ const verifyLambda = (intervals, expectedLambda) =>{
     };
 }
 
+
 queue.declare({
     connectionID: connID,
     name: QUEUE_NAME,
@@ -146,98 +81,179 @@ queue.declare({
     args: { 'x-max-length': 100 },
 });
 
-// Return the next inter-arrival time (seconds) according to selected distribution.
-function getInterArrival() {
-    return (distributionGenerators[DISTRIBUTION] || distributionGenerators.poisson)();
-}
-
-// Online statistics helper using Welford's algorithm for stable mean/variance.
-function makeStats() {
-    let n = 0, mean = 0, M2 = 0;
-    return {
-        // incorporate a new sample
-        push(x) {
-            n++;
-            const delta = x - mean;
-            mean += delta / n;
-            M2 += delta * (x - mean);
-        },
-        // snapshot of current sample count, mean, variance (population)
-        snapshot() {
-            if (n === 0) return null;
-            const variance = n > 1 ? M2 / n : 0;
-            return { n, mean, variance };
-        }
+// Poisson process function with precise rate compensation
+export function poissonProcess() {
+    let messageCount = 0;
+    const startTime = Date.now();
+    const intervals = [];
+    const publishTimestamps = []; // Track actual publish times for rate calculation
+    
+    console.log(`Starting COMPENSATED Poisson process with TARGET OUTPUT RATE λ=${LAMBDA} for duration: ${TEST_DURATION}`);
+    
+    // Pre-generate large batch to minimize overhead
+    const BATCH_SIZE = 50000; // Larger batch for better efficiency
+    let interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, LAMBDA);
+    let batchIndex = 0;
+    
+    // Timing compensation variables
+    let nextScheduledTime = Date.now(); // Absolute time when next message should be sent
+    let publishOverhead = 0; // Running average of publish overhead
+    let overheadSamples = 0;
+    const MAX_OVERHEAD_SAMPLES = 200; // Limit overhead calculation to recent samples
+    
+    // Pre-allocate arrays for efficiency
+    const recentOverheads = new Array(100);
+    let overheadIndex = 0;
+    
+    // Pre-build message template to reduce JSON overhead
+    const baseMsg = {
+        distribution: 'poisson',
+        lambda: LAMBDA
     };
-}
-
-/**
- * Stochastic arrival process executor.
- * Generates inter-arrival times, sleeps, publishes one message per interval.
- * Continues until k6 terminates the VU (maxDuration). A sliding window of the
- * most recent RECENT samples estimates an instantaneous rate.
- */
-export const stochasticProcess = () => {
-    const stats = makeStats();
-    const RECENT = 100;
-    const recent = [];
-    let count = 0;
-    const start = Date.now();
-
-    console.log(`Start stochastic distribution=${DISTRIBUTION} λ=${LAMBDA}`);
-
-    while(true) { // infinite loop; k6 will stop it per scenario maxDuration
-        const dt = getInterArrival();
-        stats.push(dt);
-        intervalTrend.add(dt);
-        lambdaVerificationCounter.add(1);
-
-        // Maintain sliding window for recent average (instantaneous rate estimate)
-        recent.push(dt);
-        if (recent.length > RECENT) recent.shift();
-
-        sleep(dt);
-        const msg = JSON.stringify({ 
-            timestamp: Date.now(),
-            distribution: DISTRIBUTION,
-            lambda: LAMBDA,
-            inter_arrival: dt
-        });
+    
+    while (true) {
+        // Batch regeneration with minimal overhead
+        if (batchIndex >= BATCH_SIZE) {
+            interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, LAMBDA);
+            batchIndex = 0;
+        }
+        
+        const interArrivalTime = interArrivalTimes[batchIndex++];
+        
+        // Calculate precise scheduled time for this message
+        nextScheduledTime += interArrivalTime * 1000; // Convert to milliseconds
+        
+        // Compensated waiting: account for publish overhead
+        const now = Date.now();
+        const rawWaitTime = nextScheduledTime - now;
+        const compensatedWaitTime = Math.max(0, rawWaitTime - publishOverhead * 1000);
+        
+        // Efficient sleep with sub-millisecond precision
+        if (compensatedWaitTime > 0) {
+            sleep(compensatedWaitTime / 1000);
+        }
+        
+        // Record pre-publish time for overhead calculation
+        const prePublishTime = Date.now();
+        
+        // Optimized message creation - reuse object structure
+        baseMsg.messageId = messageCount + 1;
+        baseMsg.timestamp = prePublishTime;
+        baseMsg.scheduledTime = nextScheduledTime;
+        baseMsg.interArrivalTime = interArrivalTime;
+        
+        // Publish message
         amqp.publish({
             connectionID: connID,
             queue_name: QUEUE_NAME,
-            body: msg,
+            body: JSON.stringify(baseMsg),
             content_type: 'application/json',
             persistent: true,
         });
-
-        count++;
-        const elapsed = (Date.now() - start) / 1000;
-        const avgRecent = recent.reduce((s, v) => s + v, 0) / recent.length;
-        const rate = 1 / avgRecent;
-        actualRateTrend.add(rate);
-
-    if (count % 100 === 0) { // periodic lightweight progress log
-            console.log(`[${DISTRIBUTION}] msgs=${count} elapsed=${elapsed.toFixed(1)}s rate=${rate.toFixed(2)}`);
+        
+        // Record actual publish completion time
+        const postPublishTime = Date.now();
+        publishTimestamps.push(postPublishTime);
+        
+        // Update overhead estimation with moving average (more recent samples weighted more)
+        if (overheadSamples < MAX_OVERHEAD_SAMPLES) {
+            const actualOverhead = (postPublishTime - prePublishTime) / 1000;
+            recentOverheads[overheadIndex] = actualOverhead;
+            overheadIndex = (overheadIndex + 1) % 100;
+            
+            // Exponential moving average for recent responsiveness
+            const alpha = 0.1; // Smoothing factor
+            if (overheadSamples === 0) {
+                publishOverhead = actualOverhead;
+            } else {
+                publishOverhead = alpha * actualOverhead + (1 - alpha) * publishOverhead;
+            }
+            overheadSamples++;
         }
-    if (count % 500 === 0) { // more detailed statistical check
-            const snap = stats.snapshot();
-            if (snap) {
-                const expectedMean = 1 / LAMBDA;
-                const meanErr = Math.abs(snap.mean - expectedMean) / expectedMean;
-                console.log(`[${DISTRIBUTION}] verify n=${snap.n} mean=${snap.mean.toFixed(4)} err=${(meanErr*100).toFixed(2)}% est.lambda=${(1/snap.mean).toFixed(3)}`);
+        
+        // Efficient array management - only store what we need
+        intervals.push(interArrivalTime);
+        if (intervals.length > 1000) {
+            intervals.splice(0, 500); // Remove old data, keep recent 500
+        }
+        
+        // Trim publish timestamps to prevent memory bloat
+        if (publishTimestamps.length > 1000) {
+            publishTimestamps.splice(0, 500);
+        }
+        
+        // Add to metrics (every message for accuracy)
+        intervalTrend.add(interArrivalTime);
+        lambdaVerificationCounter.add(1);
+        
+        messageCount++;
+        
+        // Calculate multiple rate metrics for accuracy comparison
+        const elapsed = (Date.now() - startTime) / 1000;
+        
+        // 1. True effective output rate (based on actual publish timestamps)
+        let effectiveOutputRate;
+        if (publishTimestamps.length >= 2) {
+            const timeSpan = (publishTimestamps[publishTimestamps.length - 1] - publishTimestamps[0]) / 1000;
+            effectiveOutputRate = (publishTimestamps.length - 1) / timeSpan;
+        } else {
+            effectiveOutputRate = messageCount / elapsed;
+        }
+        
+        // 2. Recent effective rate (last 100 messages for responsiveness)
+        let recentEffectiveRate = effectiveOutputRate;
+        const RECENT_COUNT = Math.min(100, publishTimestamps.length);
+        if (publishTimestamps.length >= RECENT_COUNT) {
+            const recentTimestamps = publishTimestamps.slice(-RECENT_COUNT);
+            const recentTimeSpan = (recentTimestamps[recentTimestamps.length - 1] - recentTimestamps[0]) / 1000;
+            recentEffectiveRate = (recentTimestamps.length - 1) / recentTimeSpan;
+        }
+        
+        // 3. Theoretical rate from intervals (for Poisson validation)
+        let theoreticalRate = LAMBDA;
+        if (intervals.length >= 50) {
+            const recentIntervals = intervals.slice(-50);
+            const avgInterval = recentIntervals.reduce((sum, i) => sum + i, 0) / recentIntervals.length;
+            theoreticalRate = 1 / avgInterval;
+        }
+        
+        // Update metrics with most accurate rate
+        actualRateTrend.add(recentEffectiveRate);
+        
+        // Comprehensive verification every 500 messages
+        if (messageCount % 500 === 0) {
+            const verification = verifyLambda(intervals.slice(-500), LAMBDA); // Use recent 500 samples
+            if (verification) {
+                console.log(`=== PRECISE RATE VERIFICATION (${messageCount} msgs) ===`);
+                console.log(`  TARGET OUTPUT RATE: ${LAMBDA} msg/sec`);
+                console.log(`  Effective output rate: ${recentEffectiveRate.toFixed(4)} msg/sec (${((recentEffectiveRate/LAMBDA)*100).toFixed(2)}% of target)`);
+                console.log(`  Cumulative output rate: ${(messageCount/elapsed).toFixed(4)} msg/sec`);
+                console.log(`  Theoretical λ from intervals: ${theoreticalRate.toFixed(4)} (${verification.isValid ? 'VALID' : 'INVALID'} Poisson)`);
+                console.log(`  Mean interval error: ${(verification.meanError * 100).toFixed(2)}%`);
+                console.log(`  Variance error: ${(verification.varianceError * 100).toFixed(2)}%`);
+                console.log(`  Estimated publish overhead: ${(publishOverhead * 1000).toFixed(2)}ms per message`);
+                console.log(`  Scheduling accuracy: ${((nextScheduledTime - Date.now())/1000).toFixed(3)}s ahead`);
+                
+                // Rate control feedback
+                const rateError = ((recentEffectiveRate - LAMBDA) / LAMBDA) * 100;
+                if (Math.abs(rateError) > 2) {
+                    console.log(`  ⚠️  Rate deviation: ${rateError.toFixed(2)}% from target`);
+                } else {
+                    console.log(`  ✅ Rate accuracy: within ±2% of target`);
+                }
             }
         }
+        
+        // Lightweight progress logging every 100 messages
+        if (messageCount % 100 === 0 && messageCount % 500 !== 0) {
+            const accuracyPercent = ((recentEffectiveRate / LAMBDA) * 100).toFixed(1);
+            console.log(`[${messageCount}] Effective rate: ${recentEffectiveRate.toFixed(3)} msg/sec (${accuracyPercent}% of target λ=${LAMBDA})`);
+        }
     }
-};
-
+}
 
 // Constant arrival rate function (standard K6 approach)
-/**
- * Constant arrival rate handler invoked by k6 for each generated arrival
- * (constant-arrival-rate executor pre-paces invocations at target λ).
- */
-export const constantSend = () => {
+export function constantSend() {
     const msg = JSON.stringify({ 
         timestamp: Date.now(),
         distribution: 'constant',
@@ -253,8 +269,20 @@ export const constantSend = () => {
     });
 }
 
-// Teardown hook: finalize & close AMQP connection.
-export const teardown = () => {
+// Legacy function for compatibility
+export function send() {
+    const msg = JSON.stringify({ ts: Date.now() });
+
+    amqp.publish({
+        connectionID: connID,
+        queue_name: QUEUE_NAME,
+        body: msg,
+        content_type: 'application/json',
+        persistent: true,
+    });
+}
+
+export function teardown() {
     console.log('\n=== FINAL LAMBDA VERIFICATION SUMMARY ===');
     console.log(`Expected λ: ${LAMBDA} arrivals/sec`);
     console.log(`Total verification samples: ${lambdaVerificationCounter.count || 0}`);
@@ -265,5 +293,5 @@ export const teardown = () => {
     console.log('- actual_rate: measured arrival rate over time');
     console.log('- lambda_verification_samples: total samples used for verification');
     
-    try { amqp.close(connID); } catch (_) { /* ignore */ }
+    try { amqp.close(connID); } catch (_) { }
 }
