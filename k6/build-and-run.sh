@@ -45,8 +45,6 @@ fi
 # Ensure local lib directory exists (holds probability distributions library)
 if [ ! -d "$SCRIPT_DIR/lib" ]; then
     mkdir -p "$SCRIPT_DIR/lib"
-fi
-if [ ! -d "$SCRIPT_DIR/lib/probability-distributions-k6" ]; then
     echo "📦 Cloning probability-distributions-k6 library..."
     git clone --depth 1 https://github.com/pedromoritz/probability-distributions-k6.git "$SCRIPT_DIR/lib/"
 fi
