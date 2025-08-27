@@ -70,6 +70,8 @@ spec:
               value: "PLAINTEXT"
             - name: KAFKA_LOG_DIRS
               value: "/var/lib/kafka/data"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
       volumes:
         - name: kafka-storage
           persistentVolumeClaim:
