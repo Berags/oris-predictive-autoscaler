@@ -2,7 +2,7 @@ import amqp from 'k6/x/amqp';
 import queue from 'k6/x/amqp/queue';
 import { sleep } from 'k6';
 import { Trend, Counter } from 'k6/metrics';
-import probabilityDistributions from './lib/index.js';
+import probabilityDistributions from './lib/probability-distributions-k6/index.js';
 
 const RABBITMQ_HOST = __ENV.RABBITMQ_HOST || 'localhost';
 const RABBITMQ_PORT = __ENV.RABBITMQ_PORT || '5672';
