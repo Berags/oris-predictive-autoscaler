@@ -9,7 +9,6 @@ import sys
 from collections import deque
 import numpy as np
 from kafka import KafkaProducer
-import kafka
 
 class InterArrivalCollector:
     def __init__(self, queue_name="message-queue", rabbitmq_host="localhost", 
@@ -185,7 +184,8 @@ class InterArrivalCollector:
             "queue_name": self.queue_name,
             "total_samples": len(self.inter_arrivals),
             "cdf_points": len(cdf_data),
-            "cdf_data": cdf_data[:100]  # Limit to first 100 points
+            "cdf_x": self.inter_arrivals.tolist(),
+            "cdf_y": cdf_data
         }
         
         print(f"📤 Attempting to send message to topic 'inter-arrival-cdf'")
