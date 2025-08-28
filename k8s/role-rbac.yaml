@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: autoscaler-rbac
+  namespace: oris-predictive-autoscaler
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments","deployments/scale"]
+    verbs: ["get","patch","update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: autoscaler-rbac-binding
+  namespace: oris-predictive-autoscaler
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: oris-predictive-autoscaler
+roleRef:
+  kind: Role
+  name: autoscaler-rbac
+  apiGroup: rbac.authorization.k8s.io

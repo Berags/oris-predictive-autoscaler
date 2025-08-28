@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scaler
+  namespace: oris-predictive-autoscaler
+  labels:
+    app: scaler
+spec:
+  selector:
+    matchLabels:
+      app: scaler
+  template:
+    metadata:
+      labels:
+        app: scaler
+    spec:
+      containers:
+      - name: scaler
+        image: oris-python-scaler:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: KAFKA_BROKER
+          value: kafka-service.oris-predictive-autoscaler.svc.cluster.local:9092
+        - name: KAFKA_TOPIC
+          value: replicas
+        - name: NAMESPACE
+          value: oris-predictive-autoscaler
+        - name: KIND
+          value: deployment
+        - name: SCALE_NAME
+          value: python-service
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

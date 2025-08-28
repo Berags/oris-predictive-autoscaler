@@ -1,2 +1,3 @@
 sirio-controller/target
 k6/lib
+*/.venv
