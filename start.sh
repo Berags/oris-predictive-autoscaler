@@ -3,6 +3,9 @@ set -euo pipefail
 
 NAMESPACE=oris-predictive-autoscaler
 
+echo "==> 💣 Resetting containers environment"
+kubectl delete deployments -n $NAMESPACE inter-arrival-collector --ignore-not-found=true
+
 echo "==> 👽 Creating/updating namespace"
 kubectl apply -f k8s/namespace.yaml
 
