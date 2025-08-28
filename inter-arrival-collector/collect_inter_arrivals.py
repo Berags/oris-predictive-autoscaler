@@ -160,7 +160,6 @@ class InterArrivalCollector:
         # Compute CDF
         cdf = []
         #total = sum(self.inter_arrivals)
-        cumulative = 0
         for x in sorted(self.inter_arrivals):
             #cumulative += x
             cdf.append(sum(self.inter_arrivals < x) / len(self.inter_arrivals))
@@ -184,6 +183,7 @@ class InterArrivalCollector:
             "queue_name": self.queue_name,
             "total_samples": len(self.inter_arrivals),
             "cdf_points": len(cdf_data),
+            "mean": np.mean(self.inter_arrivals),
             "cdf_x": self.inter_arrivals.tolist(),
             "cdf_y": cdf_data
         }
