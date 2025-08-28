@@ -12,7 +12,9 @@ import java.math.BigDecimal;
 
 public class App {
     public static void main(String[] args) {
+
         int queueSize = 10;
+
 
         PetriNet pn = new PetriNet();
         Place queue = pn.addPlace("queue");
