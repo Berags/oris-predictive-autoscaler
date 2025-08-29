@@ -8,7 +8,7 @@ COPY pom.xml .
 # Pre-download dependencies (use dummy pom if necessary)
 RUN mvn -B -q dependency:resolve dependency:resolve-plugins || true
 
-# Copia il codice sorgente
+# Copy source code
 COPY src ./src
 
 # Arg to optionally skip tests (default: run tests)
