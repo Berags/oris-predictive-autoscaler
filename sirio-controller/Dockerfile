@@ -5,7 +5,7 @@ WORKDIR /build
 
 # Copia solo il pom per sfruttare meglio la cache dei layer
 COPY pom.xml .
-# Pre-scarica le dipendenze (usa un pom fittizio se necessario)
+# Pre-download dependencies (use dummy pom if necessary)
 RUN mvn -B -q dependency:resolve dependency:resolve-plugins || true
 
 # Copia il codice sorgente
