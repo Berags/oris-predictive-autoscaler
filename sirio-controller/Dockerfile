@@ -11,7 +11,7 @@ RUN mvn -B -q dependency:resolve dependency:resolve-plugins || true
 # Copia il codice sorgente
 COPY src ./src
 
-# Arg per saltare i test opzionalmente (default: esegui test)
+# Arg to optionally skip tests (default: run tests)
 ARG SKIP_TESTS=false
 
 # Compile and create shaded jar
