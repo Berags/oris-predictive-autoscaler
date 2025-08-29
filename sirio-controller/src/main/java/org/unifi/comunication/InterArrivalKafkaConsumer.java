@@ -20,6 +20,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Scale;
 
+import java.math.BigDecimal;
+
+import org.unifi.model.*;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
+import java.util.List;
+import java.util.ArrayList;
+
 //with all the methods static, we can call them without creating an instance. In this case
 //it's ok because we only have one consumer for the kafka queue
 public class InterArrivalKafkaConsumer {
@@ -27,9 +36,17 @@ public class InterArrivalKafkaConsumer {
     private static volatile boolean running = true; //can be modified through different threads
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static KafkaConsumer<String, String> consumer;
-    private static GenericSplineBuilder spline;
+    private static GenericSpline spline;
+    private static APHArrivalProcess aphArrivalProcess;
+    private static Queue queue;
+    private static ServiceProcess serviceProcess;
+    private static BigDecimal rejectionTarget;
+    
+    public static void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
 
-    public static void autoConfig() {
+        queue = q;
+        serviceProcess = service;
+        rejectionTarget = rejection;
 
         // === CONFIGURATION ===
         // Kafka broker address - use environment variable for Kubernetes
@@ -91,16 +108,10 @@ public class InterArrivalKafkaConsumer {
                     System.out.println("Offset: " + record.offset());
                     System.out.println("Timestamp: " + record.timestamp());
                     System.out.println("Key: " + record.key());
-
-                    // Process the CDF message
-                    processPassCDFMessage(record.value());
+                    processCDFMessageAndOptimizerPassing(record.value(), queue, serviceProcess, rejectionTarget);
 
                     System.out.println("========================\n");
                 }
-                /*
-                Creation of the distribution
-                spline = GenericSpline.builder().CDF(x, y).build();
-                 */
                 if (records.isEmpty()) {
                     System.out.print(".");
                     System.out.flush();
@@ -117,7 +128,7 @@ public class InterArrivalKafkaConsumer {
     }
 
     // Method to process the CDF message from Kafka queue
-    private static void processPassCDFMessage(String messageValue) {
+    private static void processCDFMessageAndOptimizerPassing(String messageValue, Queue queue, ServiceProcess serviceProcess, BigDecimal Rejectiontarget) {
         try {
             System.out.println("Processing CDF message...");
             System.out.println("Raw JSON: " + messageValue);
@@ -131,9 +142,15 @@ public class InterArrivalKafkaConsumer {
             int cdfPoints = message.cdf_points;
             List<Double> cdfX = message.cdf_x;
             List<Double> cdfY = message.cdf_y;
+            float mean = message.mean;
 
             //passing of consumed data
-            spline.CDF(cdfX, cdfY);
+        
+                
+            spline = GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
+
+            aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
+            Optimizer.minReplicaExponential(aphArrivalProcess, queue, serviceProcess, Rejectiontarget);
 
             // CDF data arrays
             List<Double> interArrivalTimes = new ArrayList<>(cdfX);
