@@ -16,7 +16,7 @@ docker build -t oris-python-service:latest ./service/
 echo "==> Building inter-arrival collector image"
 docker build -t inter-arrival-collector:latest ./inter-arrival-collector/
 echo "==> ☕ Building Java sirio-controller image"
-docker build -t sirio-controller:latest ./sirio-controller/
+docker build -t sirio-controller:latest --build-arg SKIP_TESTS=true ./sirio-controller/
 echo "==> Loading images into Minikube"
 minikube image load oris-python-service:latest
 minikube image load inter-arrival-collector:latest

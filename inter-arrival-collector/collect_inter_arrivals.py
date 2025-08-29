@@ -27,7 +27,7 @@ class InterArrivalCollector:
         self.monitoring_interval = 5   # Seconds between samples
         
         # ✅ Kafka configuration
-        kafka_host = "kafka-service.oris-predictive-autoscaler.svc.cluster.local:9092"
+        kafka_host = "kafka-service:9092"
         self.kafka_producer = KafkaProducer(
             bootstrap_servers=[kafka_host],
             value_serializer=lambda v: json.dumps(v).encode('utf-8')
