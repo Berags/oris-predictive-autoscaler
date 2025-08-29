@@ -1,4 +1,4 @@
-package org.unifi.model;
+package org.unifi.comunication;
 
 import java.util.List;
 

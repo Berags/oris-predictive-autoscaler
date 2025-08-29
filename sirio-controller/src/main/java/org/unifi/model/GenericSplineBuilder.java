@@ -6,18 +6,22 @@ import java.util.ArrayList;
 public class GenericSplineBuilder{
     GenericSpline gs = new GenericSpline();
 
-    public GenericSpline CDF(List<Double> x, List<Double> y){
+    public GenericSplineBuilder CDF(List<Double> x, List<Double> y){
         gs.setCDF(x, y);
-        return gs;
+        return this;
     }
 
-    public GenericSpline PDF(List<Double> x, List<Double> y){
+    public GenericSplineBuilder PDF(List<Double> x, List<Double> y){
         gs.setPDF(x, y);
-        return gs;
+        return this;
     }
 
-    public GenericSpline mean(double mean){
+    public GenericSplineBuilder mean(double mean){
         gs.setMean(mean);
+        return this;
+    }
+
+    public GenericSpline build(){
         return gs;
     }
 }

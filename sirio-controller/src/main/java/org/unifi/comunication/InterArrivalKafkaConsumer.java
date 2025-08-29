@@ -1,4 +1,4 @@
-package org.unifi.model;
+package org.unifi.comunication;
 
 // Required imports for Kafka
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -10,6 +10,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 // Jackson imports for JSON parsing
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.unifi.model.*;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
@@ -27,9 +28,6 @@ public class InterArrivalKafkaConsumer {
 
     
     public static void autoConfig(){
-
-        new GenericSpline();
-        spline = GenericSpline.builder();
 
          // === CONFIGURATION ===
         
@@ -99,7 +97,10 @@ public class InterArrivalKafkaConsumer {
                     
                     System.out.println("========================\n");
                 }
-                
+                /*
+                Creation of the distribution
+                spline = GenericSpline.builder().CDF(x, y).build();
+                */
                 if (records.isEmpty()) {
                     System.out.print(".");
                     System.out.flush();

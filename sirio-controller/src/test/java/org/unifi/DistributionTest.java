@@ -17,7 +17,7 @@ public class DistributionTest{
         List<Double> xLinear = Arrays.asList(new Double[] {0., 1., 2., 3.});
         List<Double> yLinear = Arrays.asList(new Double[] {0., 0.33, 0.66, 1.});
             
-        Distribution d = GenericSpline.builder().CDF(xLinear, yLinear);
+        Distribution d = GenericSpline.builder().CDF(xLinear, yLinear).build();
 
         assertEquals(0, d.getCDFValue(-1), 0.0001, "CDF on the left of support isn't 0");
         assertEquals(1, d.getCDFValue(4), 0.0001, "CDF on the right of support isn't 1");
@@ -30,7 +30,7 @@ public class DistributionTest{
         List<Double> xLinear = Arrays.asList(new Double[] {0., 1., 2., 3., 4., 5.});
         List<Double> yLinear = Arrays.asList(new Double[] {0., 0.15, 0.45, 0.60, 0.80, 1.});
             
-        Distribution d = GenericSpline.builder().CDF(xLinear, yLinear);
+        Distribution d = GenericSpline.builder().CDF(xLinear, yLinear).build();
 
         assertEquals(0, d.getCDFValue(-1), 0.0001, "CDF on the left of support isn't 0");
         assertEquals(1, d.getCDFValue(6), 0.0001, "CDF on the right of support isn't 1");

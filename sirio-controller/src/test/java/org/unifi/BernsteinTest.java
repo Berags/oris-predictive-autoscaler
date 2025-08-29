@@ -18,7 +18,7 @@ public class BernsteinTest{
         int n = 5;
         List<Double> x = Arrays.asList(new Double [] {0., 1., 2., 3., 4.});
         List<Double> y = Arrays.asList(new Double [] {0., 0.25, 0.44, 0.75, 1.});
-        Distribution f = GenericSpline.builder().CDF(x, y);
+        Distribution f = GenericSpline.builder().CDF(x, y).build();
 
         List<BigDecimal> sampled = ArrivalProcessFactory.bernsteinValuesCDF(f, n);
         List<BigDecimal> actual = Arrays.asList(new BigDecimal[] {BigDecimal.valueOf(1. - 0.36), BigDecimal.valueOf(0.36 - 0.23), BigDecimal.valueOf(0.23 - 0.13), BigDecimal.valueOf(0.13 - 0.05), BigDecimal.valueOf(0.05 - 0)});
