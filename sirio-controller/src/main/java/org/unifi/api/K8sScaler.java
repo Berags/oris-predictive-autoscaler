@@ -105,8 +105,12 @@ public class K8sScaler {
                 if (current == this.replicas) {
                     return true;
                 }
-            } catch (ApiException e) {
-                // Ignore and retry
+                // ApiException may occur if the Kubernetes API server is temporarily unavailable,
+                // or if there are transient network issues. These are expected during scaling operations,
+                // and it is safe to retry in these cases. Permanent errors (e.g., 404 Not Found, 403 Forbidden)
+                // may indicate misconfiguration and should be investigated if persistent.
+                // For debugging purposes, log the exception at a low level.
+                System.err.println("Transient ApiException while polling for replica count: " + e.getMessage());
             }
             TimeUnit.SECONDS.sleep(interval);
             elapsed += interval;
