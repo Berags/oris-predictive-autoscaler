@@ -14,7 +14,7 @@ COPY src ./src
 # Arg per saltare i test opzionalmente (default: esegui test)
 ARG SKIP_TESTS=false
 
-# Compila e crea il jar shaded
+# Compile and create shaded jar
 RUN if [ "$SKIP_TESTS" = "true" ]; then \
 			mvn -B -q clean package -DskipTests; \
 		else \
