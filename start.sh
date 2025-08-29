@@ -11,16 +11,6 @@ SERVICE_VERSION=latest
 SCALER_VERSION=latest
 COLLECTOR_VERSION=latest
 
-echo "==> 🔍 Rilevo daemon Docker"
-DOCKER_DAEMON_NAME="$(docker info --format '{{.Name}}' 2>/dev/null || echo unknown)"
-if [[ "$DOCKER_DAEMON_NAME" == "minikube" ]]; then
-	echo "==> 🐳 Costruzione direttamente nel daemon Minikube: skip minikube image load"
-	NEED_MINIKUBE_LOAD=0
-else
-	echo "==> 🐳 Costruzione nel daemon locale: userò minikube image load"
-	NEED_MINIKUBE_LOAD=1
-fi
-
 echo "==> 🐍 Building Python services image (consumer, cdf-service)"
 docker build -t oris-python-service:$SERVICE_VERSION ./service/
 
@@ -30,12 +20,10 @@ docker build -t oris-python-scaler:$SCALER_VERSION ./scaler/
 echo "==> 📊 Building inter-arrival collector image"
 docker build -t inter-arrival-collector:$COLLECTOR_VERSION ./inter-arrival-collector/
 
-if [[ $NEED_MINIKUBE_LOAD -eq 1 ]]; then
-	echo "==> 📦 Loading images into Minikube (no push necessario)"
-	minikube image load oris-python-service:$SERVICE_VERSION
-	minikube image load oris-python-scaler:$SCALER_VERSION
-	minikube image load inter-arrival-collector:$COLLECTOR_VERSION
-fi
+echo "==> 📦 Loading images into Minikube"
+minikube image load oris-python-service:$SERVICE_VERSION
+minikube image load oris-python-scaler:$SCALER_VERSION
+minikube image load inter-arrival-collector:$COLLECTOR_VERSION
 
 echo "==> 🚀 Applying core manifests"
 kubectl apply -n $NAMESPACE -f k8s/role-rbac.yaml

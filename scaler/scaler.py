@@ -100,15 +100,10 @@ def main():
     wait = True
     timeout = 60
     interval = 2
-    STARTUP_DELAY = int(os.getenv('STARTUP_DELAY', '60'))  # seconds to wait before connecting to Kafka
 
     print(f"Starting scaler: topic={KAFKA_TOPIC}, broker={KAFKA_BROKER}, namespace={namespace}")
     source = load_k8s_config()
     print(f"K8s config loaded from: {source}")
-
-    if STARTUP_DELAY > 0:
-        print(f"Startup delay requested: sleeping {STARTUP_DELAY}s before connecting to Kafka...")
-        time.sleep(STARTUP_DELAY)
 
     consumer = None
     try:
