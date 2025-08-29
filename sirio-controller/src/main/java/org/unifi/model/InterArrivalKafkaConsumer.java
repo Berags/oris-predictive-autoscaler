@@ -16,20 +16,22 @@ import java.util.Properties;
 import java.util.List;
 import java.util.ArrayList;
 
+//with all the methods static, we can call them without creating an instance. In this case
+//it's ok because we only have one consumer for the kafka queue
 public class InterArrivalKafkaConsumer {
 
     private static volatile boolean running = true; //can be modified through different threads
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static KafkaConsumer<String, String> consumer;
+    private static GenericSplineBuilder spline;
 
-    public static void main(String[] args) {
-        
-        // Add shutdown hook for graceful termination
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\n Shutdown signal received...");
-            running = false;
-        }));
-        
-        // === CONFIGURATION ===
+    
+    public static void autoConfig(){
+
+        new GenericSpline();
+        spline = GenericSpline.builder();
+
+         // === CONFIGURATION ===
         
         // Kafka broker address - use environment variable for Kubernetes
         String bootstrapServers = System.getenv().getOrDefault("KAFKA_BOOTSTRAP_SERVERS", "kafka-service:9092");
@@ -57,9 +59,9 @@ public class InterArrivalKafkaConsumer {
         properties.setProperty(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
         properties.setProperty(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "10000");
         properties.setProperty(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "40000");
-        
+
         // === CONSUMER CREATION ===
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
+        consumer = new KafkaConsumer<>(properties);
         consumer.subscribe(Collections.singletonList(topic));
         
         System.out.println("Inter-Arrival CDF Consumer started with configuration:");
@@ -67,7 +69,18 @@ public class InterArrivalKafkaConsumer {
         System.out.println("  Group ID: " + groupId);
         System.out.println("  Topic: " + topic);
         System.out.println("  Waiting for CDF messages...");
+
+    }
+
+    public static void start_consuming(){
+
+        // Add shutdown hook for graceful termination
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("\n Shutdown signal received...");
+            running = false;
+        }));  
         
+    
         // === CONSUMPTION LOOP ===
         try {
             while (running) {
@@ -82,7 +95,7 @@ public class InterArrivalKafkaConsumer {
                     System.out.println("Key: " + record.key());
                     
                     // Process the CDF message
-                    processCDFMessage(record.value());
+                    processPassCDFMessage(record.value());
                     
                     System.out.println("========================\n");
                 }
@@ -100,10 +113,13 @@ public class InterArrivalKafkaConsumer {
             System.out.println("\n Closing consumer...");
             consumer.close();
         }
+
     }
     
+    
+
     // Method to process the CDF message from Kafka queue
-    private static void processCDFMessage(String messageValue) {
+    private static void processPassCDFMessage(String messageValue) {
         try {
             System.out.println("Processing CDF message...");
             System.out.println("Raw JSON: " + messageValue);
@@ -118,6 +134,10 @@ public class InterArrivalKafkaConsumer {
             int cdfPoints = message.cdf_points;
             List<Double> cdfX = message.cdf_x;
             List<Double> cdfY = message.cdf_y;
+
+
+            //passing of consumed data
+            spline.CDF(cdfX, cdfY);
 
             // CDF data arrays
             List<Double> interArrivalTimes = new ArrayList<>(cdfX);
@@ -134,9 +154,6 @@ public class InterArrivalKafkaConsumer {
             System.out.println("  CDF values count: " + cdfValues.size());
             
             
-            // TO DO: processamento dei dati (e verifica del funzionamento del consumer 
-            //e correzione sul nostro caso dei parametri della configurazione del consumer)
-            
             System.out.println(" CDF message processed successfully!");
             
         } catch (Exception e) {
@@ -144,7 +161,5 @@ public class InterArrivalKafkaConsumer {
             e.printStackTrace();
             System.err.println("Raw message was: " + messageValue);
         }
-    }
-    
-    
+    } 
 }
