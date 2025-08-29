@@ -30,7 +30,7 @@ WORKDIR /app
 ENV KAFKA_BOOTSTRAP_SERVERS=kafka-service.oris-predictive-autoscaler.svc.cluster.local:9092 \
 		KAFKA_TOPIC_CDF=inter-arrival-cdf
 
-# Copia il jar dal builder
+# Copy jar from builder
 COPY --from=build /build/target/sirio-controller-1.0-SNAPSHOT.jar app.jar
 
 # Improve startup (Java 21) and footprint size
