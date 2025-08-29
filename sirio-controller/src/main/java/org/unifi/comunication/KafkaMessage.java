@@ -9,5 +9,6 @@ public class KafkaMessage {
     public int cdf_points;
     public List<Double> cdf_x;
     public List<Double> cdf_y;
+    public float mean;
 }
     
