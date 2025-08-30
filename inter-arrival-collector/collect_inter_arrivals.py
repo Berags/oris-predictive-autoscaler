@@ -10,6 +10,13 @@ from collections import deque
 import numpy as np
 from kafka import KafkaProducer
 
+# Force line-buffered stdout so prints appear immediately in kubectl logs
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True, write_through=True)
+except Exception:
+    pass
+
 class InterArrivalCollector:
     def __init__(self, queue_name="message-queue", rabbitmq_host="localhost", 
                  rabbitmq_port="15672", username="admin", password="password"):
@@ -28,11 +35,18 @@ class InterArrivalCollector:
         
         # ✅ Kafka configuration
         kafka_host = "kafka-service:9092"
-        self.kafka_producer = KafkaProducer(
-            bootstrap_servers=[kafka_host],
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
-        )
-        
+        print(f"🔌 Initializing Kafka producer to {kafka_host}")
+
+        try:
+            self.kafka_producer = KafkaProducer(
+                bootstrap_servers=[kafka_host],
+                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            )
+            print("✅ Kafka producer successfully initialized")
+        except Exception as e:
+            print(f"❌ Failed to initialize Kafka producer: {str(e)}")
+            self.kafka_producer = None
+
         # Setup signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         
@@ -43,6 +57,7 @@ class InterArrivalCollector:
     def get_queue_messages(self, count=50):
         """Peek messages from RabbitMQ queue without consuming"""
         url = f"{self.base_url}/api/queues/%2f/{self.queue_name}/get"
+        print(f"🌐 Making request to: {url}")
         
         payload = {
             "count": count,
@@ -52,15 +67,21 @@ class InterArrivalCollector:
         }
         
         try:
+            print(f"📡 Sending POST request to RabbitMQ API...")
             response = requests.post(url, json=payload, auth=self.auth, 
                                    headers=self.headers, timeout=10)
             
+            print(f"📡 Response status: {response.status_code}")
             if response.status_code == 200:
-                return response.json()
+                data = response.json()
+                print(f"📦 Successfully received {len(data)} messages")
+                return data
             else:
+                print(f"❌ HTTP error: {response.status_code} - {response.text}")
                 return []
                 
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Network error connecting to RabbitMQ: {type(e).__name__}: {e}")
             return []
     
     def extract_timestamps(self, messages):
@@ -113,32 +134,46 @@ class InterArrivalCollector:
     def collect_inter_arrivals(self):
         """Main collection loop"""
         self.running = True
+        print(f"🔄 Starting collection loop with interval {self.monitoring_interval}s")
+        print(f"🐇 Connecting to RabbitMQ at {self.base_url}")
         
         while self.running:
             try:
+                print(f"📥 Attempting to fetch {self.sample_size} messages from queue {self.queue_name}")
                 # Get messages from queue
                 messages = self.get_queue_messages(self.sample_size)
+                print(f"📦 Received {len(messages)} messages from RabbitMQ")
                 
                 if messages:
+                    print(f"📊 Processing {len(messages)} messages...")
                     # Extract timestamps
                     timestamps = self.extract_timestamps(messages)
+                    print(f"⏰ Extracted {len(timestamps)} timestamps")
                     
                     if len(timestamps) >= 2:
                         # Calculate and store inter-arrivals
                         new_inter_arrivals = np.array(self.calculate_inter_arrivals(timestamps))
                         self.inter_arrivals = new_inter_arrivals
+                        print(f"📈 Calculated {len(new_inter_arrivals)} inter-arrival times")
 
                     CDF = self.get_inter_arrivals_cdf()
                     # ✅ Publish CDF to Kafka con debug
                     print(f"📊 Calculated CDF with {len(CDF) if CDF else 0} points")
                     self.publish_cdf_to_kafka(CDF)
+                else:
+                    print("⚠️ No messages received from RabbitMQ")
 
                 # Wait for next iteration
+                print(f"⏳ Sleeping for {self.monitoring_interval} seconds...")
                 time.sleep(self.monitoring_interval)
                 
             except KeyboardInterrupt:
+                print("🛑 Received keyboard interrupt, stopping...")
                 break
-            except Exception:
+            except Exception as e:
+                print(f"❌ Error in collection loop: {type(e).__name__}: {e}")
+                import traceback
+                print(f"📋 Full traceback: {traceback.format_exc()}")
                 time.sleep(self.monitoring_interval)
     
     def get_inter_arrivals(self):
@@ -208,7 +243,8 @@ class InterArrivalCollector:
 def main():
     # Configuration from environment variables
     import os
-    
+    print("🔧 Starting InterArrivalCollector main function")
+    print("🔧 Configuring InterArrivalCollector with environment variables")
     config = {
         'queue_name': os.getenv('QUEUE_NAME', 'message-queue'),
         'rabbitmq_host': os.getenv('RABBITMQ_HOST', 'localhost'),
@@ -216,14 +252,17 @@ def main():
         'username': os.getenv('RABBITMQ_USER', 'admin'),
         'password': os.getenv('RABBITMQ_PASSWORD', 'password')
     }
-    
+    print(f"🔧 InterArrivalCollector configuration: {config}")
     # Create collector
+    print("🔧 Creating InterArrivalCollector instance...")
     collector = InterArrivalCollector(**config)
-    
+    print("🔧 InterArrivalCollector created successfully")
     # Set monitoring interval from environment
     if os.getenv('MONITORING_INTERVAL'):
         collector.monitoring_interval = int(os.getenv('MONITORING_INTERVAL'))
-    
+
+    print(f"🔧 InterArrivalCollector monitoring interval set to {collector.monitoring_interval} seconds")
+    print("🔧 Starting collection loop...")
     # Start collection
     collector.collect_inter_arrivals()
 

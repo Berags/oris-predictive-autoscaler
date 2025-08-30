@@ -12,7 +12,7 @@ public class App {
         ExponentialServiceProcess serviceProcess = new ExponentialServiceProcess("1");
         
 
-        InterArrivalKafkaConsumer.autoConfig(queue,serviceProcess,new BigDecimal("0.05"));
+        InterArrivalKafkaConsumer.autoConfig(queue,serviceProcess,new BigDecimal("5"));
         InterArrivalKafkaConsumer.start_consuming();
     }
 }
