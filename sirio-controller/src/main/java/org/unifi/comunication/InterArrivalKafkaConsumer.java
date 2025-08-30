@@ -75,6 +75,8 @@ public class InterArrivalKafkaConsumer {
         properties.setProperty(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
         properties.setProperty(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "10000");
         properties.setProperty(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "40000");
+        // Increase timeout for long-running scaling operations
+        properties.setProperty(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "600000"); // 10 minutes
 
         // === CONSUMER CREATION ===
         consumer = new KafkaConsumer<>(properties);
@@ -144,15 +146,8 @@ public class InterArrivalKafkaConsumer {
             List<Double> cdfY = message.cdf_y;
             float mean = message.mean;
 
-            //passing of consumed data
-        
-                
-            spline = GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
 
-            aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
-            Optimizer.minReplicaExponential(aphArrivalProcess, queue, serviceProcess, Rejectiontarget);
-
-            // CDF data arrays
+             // CDF data arrays
             List<Double> interArrivalTimes = new ArrayList<>(cdfX);
             List<Double> cdfValues = new ArrayList<>(cdfY);
 
@@ -166,12 +161,30 @@ public class InterArrivalKafkaConsumer {
             System.out.println("  CDF values count: " + cdfValues.size());
 
             System.out.println(" CDF message processed successfully!");
+     /**  
+            //passing of consumed data
+            System.out.println(" Starting mathematical computation...");
+            
+            System.out.println(" Building GenericSpline...");
+            spline = GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
+            System.out.println(" GenericSpline built successfully");
 
+            System.out.println("Generating BPH arrival process...");
+            aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
+            System.out.println("BPH arrival process generated successfully");
+
+            System.out.println("🔍 Computing optimal replicas...");
+            int replicas = Optimizer.minReplicaExponential(aphArrivalProcess, queue, serviceProcess, Rejectiontarget);
+            System.out.println(" Optimal replicas computed: " + replicas);
+*/
+           
+            int replicas = 10;
             K8sScaler scaler = K8sScaler.getInstance();
+            
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
                 try {
-                    scaler.scaleWorkload();
+                    scaler.scaleWorkload(replicas);
                     System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
 
                     boolean ok = scaler.waitForReplicas(60, 2);

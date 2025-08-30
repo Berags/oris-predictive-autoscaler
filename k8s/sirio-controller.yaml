@@ -13,6 +13,7 @@ spec:
       labels:
         app: sirio-controller
     spec:
+      serviceAccountName: sirio-controller
       containers:
       - name: sirio-controller
         image: sirio-controller:latest
