@@ -31,16 +31,3 @@ spec:
           requests:
             memory: "256Mi"
             cpu: "250m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: sirio-controller-service
-  namespace: oris-predictive-autoscaler
-spec:
-  selector:
-    app: sirio-controller
-  ports:
-  - port: 8080
-    targetPort: 8080
-    name: http
