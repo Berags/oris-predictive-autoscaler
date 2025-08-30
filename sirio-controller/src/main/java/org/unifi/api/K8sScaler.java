@@ -79,14 +79,14 @@ public class K8sScaler {
         this.replicas = replicas;
         V1Scale scaleBody = new V1Scale();
         // Create and set the spec properly
-        io.kubernetes.client.openapi.models.V1ScaleSpec spec = new io.kubernetes.client.openapi.models.V1ScaleSpec();
+        V1ScaleSpec spec = new V1ScaleSpec();
         spec.setReplicas(this.replicas);
         scaleBody.setSpec(spec);
 
         switch (kind.toLowerCase()) {
-            case "deployment" -> appsApi.replaceNamespacedDeploymentScale(scaleName, namespace, scaleBody);
-            case "statefulset" -> appsApi.replaceNamespacedStatefulSetScale(scaleName, namespace, scaleBody);
-            case "replicaset" -> appsApi.replaceNamespacedReplicaSetScale(scaleName, namespace, scaleBody);
+            case "deployment" -> appsApi.replaceNamespacedDeploymentScale(scaleName, namespace, scaleBody).execute();
+            case "statefulset" -> appsApi.replaceNamespacedStatefulSetScale(scaleName, namespace, scaleBody).execute();
+            case "replicaset" -> appsApi.replaceNamespacedReplicaSetScale(scaleName, namespace, scaleBody).execute();
             default -> throw new IllegalArgumentException("Kind not supported: " + kind);
         }
     }

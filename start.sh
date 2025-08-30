@@ -29,12 +29,10 @@ kubectl apply -f k8s/namespace.yaml
 echo "==>  Applying core manifests"
 kubectl apply -n $NAMESPACE -f k8s/rabbitmq-config.yaml
 kubectl apply -n $NAMESPACE -f k8s/rabbitmq.yaml
-
 kubectl wait --for=condition=ready pod -l app=rabbitmq -n $NAMESPACE --timeout=60s
 
 kubectl apply -n $NAMESPACE -f k8s/service.yaml
 kubectl apply -n $NAMESPACE -f k8s/kafka.yaml
-
 kubectl wait --for=condition=ready pod -l app=kafka -n $NAMESPACE --timeout=120s
 
 
@@ -42,33 +40,42 @@ echo "==> Verifying Kafka is fully operational..."
 echo "Waiting 30 seconds for Kafka internal initialization..."
 sleep 30
 
+echo "==> Creating Kafka topic(s)"
+TOPIC_NAME="inter-arrival-cdf"
+KAFKA_POD=$(kubectl get pods -n "$NAMESPACE" -l app=kafka -o jsonpath='{.items[0].metadata.name}')
+if [ -z "$KAFKA_POD" ]; then
+	echo "❌ Could not find Kafka pod (label app=kafka). Skipping topic creation." >&2
+else
+	echo "Creating topic '$TOPIC_NAME' if missing..."
+	kubectl exec -n "$NAMESPACE" "$KAFKA_POD" -- bash -c '
+		set -e
+		KT=$(command -v kafka-topics.sh || echo /opt/kafka/bin/kafka-topics.sh)
+		"$KT" --create --if-not-exists --topic '"$TOPIC_NAME"' --bootstrap-server kafka-service:9092 --partitions 1 --replication-factor 1 || true
+		echo "Existing topics:"
+		"$KT" --list --bootstrap-server kafka-service:9092
+	' || echo "⚠️  Topic creation/listing encountered a non-fatal error."
+fi
+
 
 kubectl apply -n $NAMESPACE -f k8s/prometheus.yaml
-
 kubectl wait --for=condition=ready pod -l app=prometheus -n $NAMESPACE --timeout=30s
 
 
 kubectl apply -n $NAMESPACE -f k8s/grafana.yaml
-
 kubectl wait --for=condition=ready pod -l app=grafana -n $NAMESPACE --timeout=30s
 
 
 kubectl apply -n $NAMESPACE -f k8s/kafdrop.yaml
-
 kubectl wait --for=condition=ready pod -l app=kafdrop -n $NAMESPACE --timeout=60s
 
 
 kubectl apply -n $NAMESPACE -f k8s/inter-arrival-collector.yaml
-
 kubectl wait --for=condition=ready pod -l app=inter-arrival-collector -n $NAMESPACE --timeout=60s
 
 
+kubectl apply -n $NAMESPACE -f k8s/sirio-controller-rbac.yaml
 kubectl apply -n $NAMESPACE -f k8s/sirio-controller.yaml
-
-kubectl wait --for=condition=ready pod -l app=sirio-controller -n $NAMESPACE --timeout=120s
-
-
-kubectl delete pods --all -n oris-predictive-autoscaler
+kubectl wait --for=condition=ready pod -l app=sirio-controller -n $NAMESPACE --timeout=60s
 
 echo "==>  Initial pod status"
 kubectl get pods -n $NAMESPACE

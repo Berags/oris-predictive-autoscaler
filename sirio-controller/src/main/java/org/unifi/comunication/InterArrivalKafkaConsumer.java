@@ -1,6 +1,7 @@
 package org.unifi.comunication;
 
 // Required imports for Kafka
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,21 +14,15 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.unifi.api.K8sScaler;
-import org.unifi.model.GenericSplineBuilder;
+import org.unifi.model.APHArrivalProcess;
+import org.unifi.model.GenericSpline;
+import org.unifi.model.Queue;
+import org.unifi.model.ServiceProcess;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Scale;
-
-import java.math.BigDecimal;
-
-import org.unifi.model.*;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
-import java.util.List;
-import java.util.ArrayList;
 
 //with all the methods static, we can call them without creating an instance. In this case
 //it's ok because we only have one consumer for the kafka queue
@@ -41,7 +36,7 @@ public class InterArrivalKafkaConsumer {
     private static Queue queue;
     private static ServiceProcess serviceProcess;
     private static BigDecimal rejectionTarget;
-    
+
     public static void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
 
         queue = q;
@@ -66,8 +61,7 @@ public class InterArrivalKafkaConsumer {
         properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-
+        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         // === ADDITIONAL CONFIGURATIONS ===
         properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
         properties.setProperty(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
@@ -146,8 +140,7 @@ public class InterArrivalKafkaConsumer {
             List<Double> cdfY = message.cdf_y;
             float mean = message.mean;
 
-
-             // CDF data arrays
+            // CDF data arrays
             List<Double> interArrivalTimes = new ArrayList<>(cdfX);
             List<Double> cdfValues = new ArrayList<>(cdfY);
 
@@ -161,26 +154,26 @@ public class InterArrivalKafkaConsumer {
             System.out.println("  CDF values count: " + cdfValues.size());
 
             System.out.println(" CDF message processed successfully!");
-     /**  
-            //passing of consumed data
-            System.out.println(" Starting mathematical computation...");
-            
-            System.out.println(" Building GenericSpline...");
-            spline = GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
-            System.out.println(" GenericSpline built successfully");
+            /**
+             * //passing of consumed data System.out.println(" Starting
+             * mathematical computation...");
+             *
+             * System.out.println(" Building GenericSpline..."); spline =
+             * GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
+             * System.out.println(" GenericSpline built successfully");
 
-            System.out.println("Generating BPH arrival process...");
-            aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
-            System.out.println("BPH arrival process generated successfully");
+             *              *System.out.println("Generating BPH arrival process...");
+             * aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
+             * System.out.println("BPH arrival process generated successfully");
 
-            System.out.println("🔍 Computing optimal replicas...");
-            int replicas = Optimizer.minReplicaExponential(aphArrivalProcess, queue, serviceProcess, Rejectiontarget);
-            System.out.println(" Optimal replicas computed: " + replicas);
-*/
-           
+             *              *System.out.println("🔍 Computing optimal replicas..."); int
+             * replicas = Optimizer.minReplicaExponential(aphArrivalProcess,
+             * queue, serviceProcess, Rejectiontarget); System.out.println("
+             * Optimal replicas computed: " + replicas);
+             */
+
             int replicas = 10;
             K8sScaler scaler = K8sScaler.getInstance();
-            
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
                 try {
