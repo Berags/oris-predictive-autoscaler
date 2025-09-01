@@ -60,6 +60,8 @@ fi
 kubectl apply -n $NAMESPACE -f k8s/prometheus.yaml
 kubectl wait --for=condition=ready pod -l app=prometheus -n $NAMESPACE --timeout=30s
 
+kubectl apply -n $NAMESPACE -f k8s/kube-state-metrics-rbac.yaml
+kubectl apply -n $NAMESPACE -f k8s/kube-state-metrics.yaml
 
 kubectl apply -n $NAMESPACE -f k8s/grafana.yaml
 kubectl wait --for=condition=ready pod -l app=grafana -n $NAMESPACE --timeout=30s
@@ -96,6 +98,8 @@ kubectl port-forward -n $NAMESPACE svc/kafdrop 9000:9000 \
 	& pid_kafdrop=$!
 kubectl port-forward -n $NAMESPACE svc/kafka-service 9092:9092 \
 	& pid_kafka=$!
+kubectl port-forward -n $NAMESPACE svc/kube-state-metrics 8080:8080 \
+	& pid_kube_state=$!
 
 trap 'echo "\n==>  Stopping port-forward"; kill $pid_rmq_mgmt $pid_rmq_amqp $pid_prom $pid_graf $pid_kafdrop $pid_kafka 2>/dev/null || true' INT TERM
 
