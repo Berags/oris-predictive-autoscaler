@@ -8,7 +8,7 @@ import org.unifi.comunication.*;
 
 public class App {
     public static void main(String[] args) {
-        Queue queue = new Queue(1);
+        Queue queue = new Queue(100);
         ExponentialServiceProcess serviceProcess = new ExponentialServiceProcess("1");
         
 

@@ -76,18 +76,68 @@ public class K8sScaler {
             System.out.println("No scaling needed, already at " + replicas + " replicas.");
             return;
         }
+        
+        System.out.println("Starting scaling operation...");
+        System.out.println("  Deployment: " + this.scaleName);
+        System.out.println("  Namespace: " + this.namespace);
+        System.out.println("  Kind: " + this.kind);
+        System.out.println("  Current replicas: " + this.replicas);
+        System.out.println("  Target replicas: " + replicas);
+        
         this.replicas = replicas;
         V1Scale scaleBody = new V1Scale();
+        
+        // Create and set the metadata (required for proper API request)
+        io.kubernetes.client.openapi.models.V1ObjectMeta metadata = new io.kubernetes.client.openapi.models.V1ObjectMeta();
+        metadata.setName(this.scaleName);
+        metadata.setNamespace(this.namespace);
+        scaleBody.setMetadata(metadata);
+        
         // Create and set the spec properly
         V1ScaleSpec spec = new V1ScaleSpec();
         spec.setReplicas(this.replicas);
         scaleBody.setSpec(spec);
 
-        switch (kind.toLowerCase()) {
-            case "deployment" -> appsApi.replaceNamespacedDeploymentScale(scaleName, namespace, scaleBody).execute();
-            case "statefulset" -> appsApi.replaceNamespacedStatefulSetScale(scaleName, namespace, scaleBody).execute();
-            case "replicaset" -> appsApi.replaceNamespacedReplicaSetScale(scaleName, namespace, scaleBody).execute();
-            default -> throw new IllegalArgumentException("Kind not supported: " + kind);
+        System.out.println("Sending scale request to Kubernetes API...");
+
+        try {
+            switch (kind.toLowerCase()) {
+                case "deployment" -> {
+                    V1Scale result = appsApi.replaceNamespacedDeploymentScale(scaleName, namespace, scaleBody).execute();
+                    System.out.println("Scale request successful for deployment!");
+                    if (result != null && result.getSpec() != null) {
+                        System.out.println("  Result replicas: " + result.getSpec().getReplicas());
+                    }
+                }
+                case "statefulset" -> {
+                    V1Scale result = appsApi.replaceNamespacedStatefulSetScale(scaleName, namespace, scaleBody).execute();
+                    System.out.println("Scale request successful for statefulset!");
+                    if (result != null && result.getSpec() != null) {
+                        System.out.println("  Result replicas: " + result.getSpec().getReplicas());
+                    }
+                }
+                case "replicaset" -> {
+                    V1Scale result = appsApi.replaceNamespacedReplicaSetScale(scaleName, namespace, scaleBody).execute();
+                    System.out.println("Scale request successful for replicaset!");
+                    if (result != null && result.getSpec() != null) {
+                        System.out.println("  Result replicas: " + result.getSpec().getReplicas());
+                    }
+                }
+                default -> {
+                    System.err.println("Kind not supported: " + kind);
+                    throw new IllegalArgumentException("Kind not supported: " + kind);
+                }
+            }
+        } catch (ApiException e) {
+            System.err.println("ApiException during scaling:");
+            System.err.println("  Code: " + e.getCode());
+            System.err.println("  Message: " + e.getMessage());
+            System.err.println("  Response body: " + e.getResponseBody());
+            throw e;
+        } catch (Exception e) {
+            System.err.println("Unexpected exception during scaling: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 
