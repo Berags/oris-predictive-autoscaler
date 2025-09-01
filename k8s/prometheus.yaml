@@ -68,4 +68,4 @@ data:
       - job_name: 'kube-state-metrics'
         static_configs:
           - targets: ['kube-state-metrics:8080']
-        scrape_interval: 15s
+        scrape_interval: 1s

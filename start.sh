@@ -2,14 +2,12 @@ set -euo pipefail
 
 NAMESPACE=oris-predictive-autoscaler
 
-echo "==> 💣 Resetting containers environment"
+echo "==> Resetting containers environment"
 kubectl delete deployments -n $NAMESPACE inter-arrival-collector --ignore-not-found=true
-
-echo "==> 👽 Creating/updating namespace"
-kubectl apply -f k8s/namespace.yaml
-
-kubectl delete deployment inter-arrival-collector -n $NAMESPACE --ignore-not-found=true
 kubectl delete deployment sirio-controller -n $NAMESPACE --ignore-not-found=true
+
+echo "==> Creating/updating namespace"
+kubectl apply -f k8s/namespace.yaml
 
 echo "==> Building Python services image (consumer, cdf-service)"
 docker build -t oris-python-service:latest ./service/
@@ -17,14 +15,11 @@ echo "==> Building inter-arrival collector image"
 docker build -t inter-arrival-collector:latest ./inter-arrival-collector/
 echo "==> ☕ Building Java sirio-controller image"
 docker build -t sirio-controller:latest --build-arg SKIP_TESTS=true ./sirio-controller/
+
 echo "==> Loading images into Minikube"
 minikube image load oris-python-service:latest
 minikube image load inter-arrival-collector:latest
 minikube image load sirio-controller:latest
-
-
-echo "==> Creating/updating namespace"
-kubectl apply -f k8s/namespace.yaml
 
 echo "==>  Applying core manifests"
 kubectl apply -n $NAMESPACE -f k8s/rabbitmq-config.yaml
@@ -44,7 +39,7 @@ echo "==> Creating Kafka topic(s)"
 TOPIC_NAME="inter-arrival-cdf"
 KAFKA_POD=$(kubectl get pods -n "$NAMESPACE" -l app=kafka -o jsonpath='{.items[0].metadata.name}')
 if [ -z "$KAFKA_POD" ]; then
-	echo "❌ Could not find Kafka pod (label app=kafka). Skipping topic creation." >&2
+	echo "Could not find Kafka pod (label app=kafka). Skipping topic creation." >&2
 else
 	echo "Creating topic '$TOPIC_NAME' if missing..."
 	kubectl exec -n "$NAMESPACE" "$KAFKA_POD" -- bash -c '
@@ -53,9 +48,11 @@ else
 		"$KT" --create --if-not-exists --topic '"$TOPIC_NAME"' --bootstrap-server kafka-service:9092 --partitions 1 --replication-factor 1 || true
 		echo "Existing topics:"
 		"$KT" --list --bootstrap-server kafka-service:9092
-	' || echo "⚠️  Topic creation/listing encountered a non-fatal error."
+	' || echo "Topic creation/listing encountered a non-fatal error."
 fi
 
+#These setups are recovered from this repository https://github.com/kubernetes/kube-state-metrics
+kubectl apply -n $NAMESPACE -k kube-state-metrics
 
 kubectl apply -n $NAMESPACE -f k8s/prometheus.yaml
 kubectl wait --for=condition=ready pod -l app=prometheus -n $NAMESPACE --timeout=30s
@@ -103,8 +100,8 @@ kubectl port-forward -n $NAMESPACE svc/kube-state-metrics 8080:8080 \
 
 trap 'echo "\n==>  Stopping port-forward"; kill $pid_rmq_mgmt $pid_rmq_amqp $pid_prom $pid_graf $pid_kafdrop $pid_kafka 2>/dev/null || true' INT TERM
 
-echo " RabbitMQ:  http://localhost:15672"
-echo " Prometheus: http://localhost:9090"
-echo " Grafana:    http://localhost:3000"
-echo " Kafdrop:    http://localhost:9000"
+echo " - RabbitMQ:  http://localhost:15672"
+echo " - Prometheus: http://localhost:9090"
+echo " - Grafana:    http://localhost:3000"
+echo " - Kafdrop:    http://localhost:9000"
 wait
