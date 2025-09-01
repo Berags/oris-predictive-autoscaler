@@ -11,6 +11,7 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1Scale;
+import io.kubernetes.client.openapi.models.V1ScaleSpec;
 import io.kubernetes.client.util.ClientBuilder;
 
 public class K8sScaler {
@@ -29,7 +30,7 @@ public class K8sScaler {
         this.appsApi = new AppsV1Api();
         this.coreApi = new CoreV1Api();
         this.namespace = System.getenv().getOrDefault("NAMESPACE", "oris-predictive-autoscaler");
-        this.replicas = 5;
+        this.replicas = 1;
         this.kind = System.getenv().getOrDefault("KIND", "deployment");
         this.scaleName = System.getenv().getOrDefault("SCALE_NAME", "python-service");
     }
@@ -69,14 +70,23 @@ public class K8sScaler {
         }
     }
 
-    public void scaleWorkload() throws ApiException {
+    public void scaleWorkload(int replicas) throws ApiException {
+
+        if(this.replicas == replicas) {
+            System.out.println("No scaling needed, already at " + replicas + " replicas.");
+            return;
+        }
+        this.replicas = replicas;
         V1Scale scaleBody = new V1Scale();
-        scaleBody.getSpec().setReplicas(this.replicas);
+        // Create and set the spec properly
+        V1ScaleSpec spec = new V1ScaleSpec();
+        spec.setReplicas(this.replicas);
+        scaleBody.setSpec(spec);
 
         switch (kind.toLowerCase()) {
-            case "deployment" -> appsApi.replaceNamespacedDeploymentScale(scaleName, namespace, scaleBody);
-            case "statefulset" -> appsApi.replaceNamespacedStatefulSetScale(scaleName, namespace, scaleBody);
-            case "replicaset" -> appsApi.replaceNamespacedReplicaSetScale(scaleName, namespace, scaleBody);
+            case "deployment" -> appsApi.replaceNamespacedDeploymentScale(scaleName, namespace, scaleBody).execute();
+            case "statefulset" -> appsApi.replaceNamespacedStatefulSetScale(scaleName, namespace, scaleBody).execute();
+            case "replicaset" -> appsApi.replaceNamespacedReplicaSetScale(scaleName, namespace, scaleBody).execute();
             default -> throw new IllegalArgumentException("Kind not supported: " + kind);
         }
     }

@@ -13,6 +13,8 @@ public class Optimizer{
             replicas++;
             s.setPoolSize(replicas);
             model = new Model(a, q, s, true);
+            System.out.println("Evaluating model with " + replicas + " replicas...");
+            System.out.println(" Actual rejection rate: " + model.evaluateRejectionRate());
         }while(model.evaluateRejectionRate().compareTo(target) == 1);
         return replicas;
     }

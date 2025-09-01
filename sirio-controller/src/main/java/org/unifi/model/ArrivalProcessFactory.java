@@ -15,7 +15,7 @@ public class ArrivalProcessFactory{
         return new APHArrivalProcess(ArrivalProcessFactory.bernsteinValuesCDF(f, n));
     }
 
-    public static List<BigDecimal> bernsteinValuesCDF(Distribution f, int n){
+    public static List<BigDecimal> bernsteinValuesCDF(Distribution f, int n)throws IllegalArgumentException{
         if(n <= 0){
             throw new IllegalArgumentException("To generate a Phase Type using the Bernstein Exponetial it's needed at least n >= 1");
         }

@@ -8,7 +8,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -63,7 +63,7 @@ spec:
             - name: KAFKA_NODE_ID
               value: "1"
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://kafka-service.oris-predictive-autoscaler.svc.cluster.local:9092"
+              value: "PLAINTEXT://kafka-service:9092"
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
             - name: KAFKA_INTER_BROKER_LISTENER_NAME
