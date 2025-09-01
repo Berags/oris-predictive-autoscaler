@@ -14,10 +14,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.unifi.api.K8sScaler;
-import org.unifi.model.APHArrivalProcess;
-import org.unifi.model.GenericSpline;
-import org.unifi.model.Queue;
-import org.unifi.model.ServiceProcess;
+import org.unifi.model.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -33,6 +30,7 @@ public class InterArrivalKafkaConsumer {
     private static KafkaConsumer<String, String> consumer;
     private static GenericSpline spline;
     private static APHArrivalProcess aphArrivalProcess;
+    private static ExponentialArrivalProcess expArrivalProcess;
     private static Queue queue;
     private static ServiceProcess serviceProcess;
     private static BigDecimal rejectionTarget;
@@ -154,25 +152,33 @@ public class InterArrivalKafkaConsumer {
             System.out.println("  CDF values count: " + cdfValues.size());
 
             System.out.println(" CDF message processed successfully!");
-            /**
-             * //passing of consumed data System.out.println(" Starting
-             * mathematical computation...");
-             *
-             * System.out.println(" Building GenericSpline..."); spline =
-             * GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
-             * System.out.println(" GenericSpline built successfully");
+            
+            //passing of consumed data 
+            System.out.println(" Starting mathematical computation...");
+             
+            System.out.println(" Building GenericSpline..."); spline =
+            GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
+            System.out.println(" GenericSpline built successfully");
 
-             *              *System.out.println("Generating BPH arrival process...");
-             * aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
-             * System.out.println("BPH arrival process generated successfully");
+            System.out.println("Generating BPH arrival process...");
 
-             *              *System.out.println("🔍 Computing optimal replicas..."); int
-             * replicas = Optimizer.minReplicaExponential(aphArrivalProcess,
-             * queue, serviceProcess, Rejectiontarget); System.out.println("
-             * Optimal replicas computed: " + replicas);
-             */
+            //aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
+            expArrivalProcess = ArrivalProcessFactory.generateExponential(spline);
 
-            int replicas = 10;
+            System.out.println("BPH arrival process generated successfully");
+
+            System.out.println("🔍 Computing optimal replicas..."); 
+
+            /**int replicas = Optimizer.minReplicaExponential(aphArrivalProcess,
+            queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
+            */
+
+            int replicas = Optimizer.minReplicaExponential(expArrivalProcess,
+            queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
+            
+
+
+
             K8sScaler scaler = K8sScaler.getInstance();
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
