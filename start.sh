@@ -3,8 +3,7 @@ set -euo pipefail
 NAMESPACE=oris-predictive-autoscaler
 
 echo "==> Resetting containers environment"
-kubectl delete deployments -n $NAMESPACE inter-arrival-collector --ignore-not-found=true
-kubectl delete deployment sirio-controller -n $NAMESPACE --ignore-not-found=true
+kubectl delete deployment,pods,service,statefulset -n oris-predictive-autoscaler --all --ignore-not-found=true
 
 echo "==> Creating/updating namespace"
 kubectl apply -f k8s/namespace.yaml
@@ -51,8 +50,6 @@ else
 	' || echo "Topic creation/listing encountered a non-fatal error."
 fi
 
-#These setups are recovered from this repository https://github.com/kubernetes/kube-state-metrics
-kubectl apply -n $NAMESPACE -k kube-state-metrics
 
 kubectl apply -n $NAMESPACE -f k8s/prometheus.yaml
 kubectl wait --for=condition=ready pod -l app=prometheus -n $NAMESPACE --timeout=30s
@@ -63,26 +60,22 @@ kubectl apply -n $NAMESPACE -f k8s/kube-state-metrics.yaml
 kubectl apply -n $NAMESPACE -f k8s/grafana.yaml
 kubectl wait --for=condition=ready pod -l app=grafana -n $NAMESPACE --timeout=30s
 
-
 kubectl apply -n $NAMESPACE -f k8s/kafdrop.yaml
 kubectl wait --for=condition=ready pod -l app=kafdrop -n $NAMESPACE --timeout=60s
 
-
 kubectl apply -n $NAMESPACE -f k8s/inter-arrival-collector.yaml
 kubectl wait --for=condition=ready pod -l app=inter-arrival-collector -n $NAMESPACE --timeout=60s
-
 
 kubectl apply -n $NAMESPACE -f k8s/sirio-controller-rbac.yaml
 kubectl apply -n $NAMESPACE -f k8s/sirio-controller.yaml
 kubectl wait --for=condition=ready pod -l app=sirio-controller -n $NAMESPACE --timeout=60s
 
-echo "==>  Initial pod status"
+echo "==> Initial pod status"
 kubectl get pods -n $NAMESPACE
 
-echo "==>  Waiting for main components (rabbitmq, prometheus, grafana, kafka, kafdrop, sirio-controller)" 
+echo "==> Waiting for main components (rabbitmq, prometheus, grafana, kafka, kafdrop, sirio-controller)" 
 
-
-echo "==>  Starting port-forward (Ctrl+C to close)"
+echo "==> Starting port-forward (Ctrl+C to close)"
 kubectl port-forward -n $NAMESPACE svc/rabbitmq-service 15672:15672 \
 	& pid_rmq_mgmt=$!
 kubectl port-forward -n $NAMESPACE svc/rabbitmq-service 5672:5672 \

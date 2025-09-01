@@ -2,6 +2,9 @@ sirio-controller/target
 
 sirio-controller/dependency-reduced-pom.xml
 sirio-controller/sirio-controller.ipr
+sirio-controller/sirio-controller.iml
 sirio-controller/sirio-controller.iws
 
 k6/lib
+
+.fuse_hidden*
