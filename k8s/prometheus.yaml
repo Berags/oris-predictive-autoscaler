@@ -65,3 +65,7 @@ data:
           - targets: ['host.docker.internal:6565']  # K6 metrics endpoint
         metrics_path: /metrics
         scrape_interval: 5s
+      - job_name: "kube-state-metrics"
+        static_configs:
+          - targets: ["kube-state-metrics.oris-predictive-autoscaler.svc.cluster.local:8080"]
+        scrape_interval: 1s
