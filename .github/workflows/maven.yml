@@ -33,10 +33,9 @@ jobs:
             sirio-controller/target/surefire-reports/**
             sirio-controller/target/failsafe-reports/**
 
-      - name: Test Report
+      - name: Upload JaCoCo coverage report
         if: always()
-        uses: dorny/test-reporter@v1
+        uses: actions/upload-artifact@v4
         with:
-          name: JUnit Tests
-          path: sirio-controller/target/surefire-reports/*.xml
-          reporter: java-junit
+          name: jacoco-report
+          path: sirio-controller/target/site/jacoco/**
