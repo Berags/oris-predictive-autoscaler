@@ -6,7 +6,6 @@ import org.oristool.petrinet.Place;
 import org.oristool.petrinet.Transition;
 import org.oristool.models.stpn.MarkingExpr;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
-import org.oristool.math.function.EXP;
 import java.util.List;
 import java.util.ArrayList;
 import java.math.BigDecimal;

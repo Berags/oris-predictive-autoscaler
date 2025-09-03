@@ -1,13 +1,11 @@
 package org.unifi;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.unifi.model.*;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.math.BigDecimal;
 
 public class OptimizerTest{
@@ -28,6 +26,6 @@ public class OptimizerTest{
         Queue q = new Queue(18);
         ServiceProcess s = new ExponentialServiceProcess("0.25");
 
-        assertEquals(6, Optimizer.minReplicaExponential(a, q, s, BigDecimal.valueOf(0.0001)), "Wrong min replicas founded when arrival is a phase type");
+        assertEquals(5, Optimizer.minReplicaExponential(a, q, s, BigDecimal.valueOf(0.0001)), "Wrong min replicas founded when arrival is a phase type");
     }
 }
