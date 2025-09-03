@@ -176,9 +176,6 @@ public class InterArrivalKafkaConsumer {
             int replicas = Optimizer.minReplicaExponential(expArrivalProcess,
             queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
             
-
-
-
             K8sScaler scaler = K8sScaler.getInstance();
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
