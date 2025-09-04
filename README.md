@@ -49,6 +49,11 @@
 
 ## Quick Start
 
+### 0. Get all the Code
+The command for coping the repository.
+```bash
+git clone https://github.com/Berags/oris-predictive-autoscaler.git
+```
 ### 1. Cluster Deployment
 First you should deploy the sistem using the following script.
 ```bash
@@ -99,3 +104,4 @@ RabbitMQ is configured with:
 - Porta AMQP: 5672
 - Porta Management: 15672
 - Default Credentials: admin/password
+
