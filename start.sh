@@ -44,9 +44,15 @@ else
 	kubectl exec -n "$NAMESPACE" "$KAFKA_POD" -- bash -c '
 		set -e
 		KT=$(command -v kafka-topics.sh || echo /opt/kafka/bin/kafka-topics.sh)
-		"$KT" --create --if-not-exists --topic '"$TOPIC_NAME"' --bootstrap-server kafka-service:9092 --partitions 1 --replication-factor 1 || true
+		"$KT" --create --if-not-exists --topic '"$TOPIC_NAME"' --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1 || true
+	' || echo "Topic creation/listing encountered a non-fatal error."
+
+	kubectl exec -n "$NAMESPACE" "$KAFKA_POD" -- bash -c '
+		set -e
+		KT=$(command -v kafka-topics.sh || echo /opt/kafka/bin/kafka-topics.sh)
+		"$KT" --create --if-not-exists --topic __consumer_offsets --bootstrap-server localhost:9092 --partitions 50 --replication-factor 1 || true
 		echo "Existing topics:"
-		"$KT" --list --bootstrap-server kafka-service:9092
+		"$KT" --list --bootstrap-server localhost:9092
 	' || echo "Topic creation/listing encountered a non-fatal error."
 fi
 

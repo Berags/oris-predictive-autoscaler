@@ -17,7 +17,7 @@ public class ArrivalProcessFactory{
 
     public static List<BigDecimal> bernsteinValuesCDF(Distribution f, int n)throws IllegalArgumentException{
         if(n <= 0){
-            throw new IllegalArgumentException("To generate a Phase Type using the Bernstein Exponetial it's needed at least n >= 1");
+            throw new IllegalArgumentException("To generate a Phase Type using the Bernstein Exponential it's needed at least n >= 1");
         }
         ArrayList<BigDecimal> bernsteinValues = new ArrayList<BigDecimal>();
         double previous = 1;

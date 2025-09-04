@@ -1,0 +1,41 @@
+name: Java CI (sirio-controller)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build & Test (sirio-controller)
+        run: mvn -B -ntp -f sirio-controller/pom.xml clean verify
+
+      - name: Upload Surefire/Failsafe reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            sirio-controller/target/surefire-reports/**
+            sirio-controller/target/failsafe-reports/**
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: sirio-controller/target/site/jacoco/**

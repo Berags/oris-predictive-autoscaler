@@ -4,27 +4,53 @@
 
 ```
 .
-├── README.md
-├── start.sh                # Start the k8s cluster
-├── service/
-│   ├── service.py          # Dummy consumer service
-│   ├── requirements.txt    # Service libraries requirements
-│   └── Dockerfile          # Dockerfile for service container
-├── k6/
-│   ├── build-and-run.sh    # Script to run k6 over the k8s cluster
-│   ├── rabbitmq-test.js    # k6 script to generate fake workload
-│   └── Dockerfile          # Dockerfile for k6 container
-└── k8s/
-    ├── namespace.yaml      # Kubernetes Namespace for cluster
-    ├── rabbitmq.yaml       # Deployment for RabbitMQ
-    ├── kafka.yaml          # Deployment for Kafka
-    └── python-service.yaml # Deployment for dummy service
+├── inter-arrival-collector # Service that extarct CDF from inter arrival times
+│   ├── collect_inter_arrivals.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── k6 # Implementation of the test workload
+│   ├── build-and-run.sh
+│   ├── Dockerfile
+│   ├── lib
+│   │   ├── index.js
+│   │   ├── LICENSE.txt
+│   │   ├── package.json
+│   │   ├── probability-distributions-k6
+│   │   ├── README.md
+│   │   └── test
+│   │       └── index.js
+│   └── rabbitmq-test.js
+├── k8s # Various configuration for used services
+│   ├── grafana.yaml
+│   ├── inter-arrival-collector.yaml
+│   ├── kafdrop.yaml
+│   ├── kafka.yaml
+│   ├── kube-state-metrics-rbac.yaml
+│   ├── kube-state-metrics.yaml
+│   ├── namespace.yaml
+│   ├── prometheus.yaml
+│   ├── rabbitmq-config.yaml
+│   ├── rabbitmq.yaml
+│   ├── service.yaml
+│   ├── sirio-controller-rbac.yaml
+│   └── sirio-controller.yaml
+├── service # Consumer Service
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── service.py
+├── sirio-controller # Implementation of a Horizontal Scaler using Sirio projection of Rejection Rate
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src
+│       ├── main
+│       └── test
+└── start.sh
 ```
 
 ## Quick Start
 
 ### 1. Cluster Deployment
-
+First you should deploy the sistem using the following script.
 ```bash
 # make the script executable
 chmod +x deploy.sh
@@ -32,13 +58,29 @@ chmod +x deploy.sh
 # start the cluster
 ./start.sh
 ```
+At the end it will be exposed some Web GUI to monitor the system.
 
-### 2. Exposed Services
+### 2. Run k6 tests
+After the system deployment it spossible to subject it with some workload with the following code:
+```bash
+# make the script executable
+chmod +x k6/build-and-run.sh
 
-- **RabbitMQ Management**: http://localhost:30672
+# start the cluster
+./k6/build-and-run.sh
+```
+This is instrumented to show some information about the workload.
+
+### 3. Exposed Services
+
+- **RabbitMQ Management**: http://localhost:15672
   - Username: `admin`
   - Password: `password`
-
+- **Grafana Dashboard**: http://localhost:3000
+  - Username: `admin`
+  - Password: `admin`
+- **Prometheus Web GUI**: http://localhost:9090
+- **Kafka Web GUI**: http://localhost:9000
 
 ## Configuration
 
@@ -57,17 +99,3 @@ RabbitMQ is configured with:
 - Porta AMQP: 5672
 - Porta Management: 15672
 - Default Credentials: admin/password
-
-## Run k6 tests
-```bash
-# make the script executable
-chmod +x k6/build-and-run.sh
-
-# start the cluster
-./k6/build-and-run.sh
-```
-
-## Graphana Query
-```
-rate(rabbitmq_global_messages_received_total{}[$__rate_interval])
-```
