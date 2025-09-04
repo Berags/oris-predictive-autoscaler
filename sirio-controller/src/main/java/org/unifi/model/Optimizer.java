@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 
 public class Optimizer{
 
-    private Optimizer(){};
-
     public static int minReplicaExponential(ArrivalProcess a, Queue q, ServiceProcess s, BigDecimal target){
         int replicas = 0;
         Model model;

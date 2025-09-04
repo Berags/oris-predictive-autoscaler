@@ -21,25 +21,33 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Scale;
 
-//with all the methods static, we can call them without creating an instance. In this case
-//it's ok because we only have one consumer for the kafka queue
-public class InterArrivalKafkaConsumer {
 
-    private static volatile boolean running = true; //can be modified through different threads
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static KafkaConsumer<String, String> consumer;
-    private static GenericSpline spline;
-    private static APHArrivalProcess aphArrivalProcess;
-    private static ExponentialArrivalProcess expArrivalProcess;
-    private static Queue queue;
-    private static ServiceProcess serviceProcess;
-    private static BigDecimal rejectionTarget;
 
-    public static void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
+/**
+ * It consumer messages from a Kafka topic containing CDF data, processes them to create an arrival process and communicates
+ * with the optimizer to compute the optimal number of replicas needed to meet a specified rejection target and with K8sScaler to scale the deployment.
+ * 
+ */
+public class Controller {
 
-        queue = q;
-        serviceProcess = service;
-        rejectionTarget = rejection;
+    private  volatile boolean running = true; //can be modified through different threads
+    private  final ObjectMapper objectMapper = new ObjectMapper();
+    private  KafkaConsumer<String, String> consumer;
+    private  GenericSpline spline;
+   /** private  APHArrivalProcess aphArrivalProcess;
+    private  ExponentialArrivalProcess expArrivalProcess; */ 
+    private ArrivalProcess arrivalProcess;
+    private  Queue queue;
+    private  ServiceProcess serviceProcess;
+    private  BigDecimal rejectionTarget;
+    private  KafkaMessage message;
+    private  K8sScaler scaler;
+
+    public  void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
+
+        this.queue = q;
+        this.serviceProcess = service;
+        this.rejectionTarget = rejection;
 
         // === CONFIGURATION ===
         // Kafka broker address - use environment variable for Kubernetes
@@ -82,12 +90,12 @@ public class InterArrivalKafkaConsumer {
 
     }
 
-    public static void start_consuming() {
+    public  void startConsuming() {
 
         // Add shutdown hook for graceful termination
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n Shutdown signal received...");
-            running = false;
+            this.running = false;
         }));
 
         // === CONSUMPTION LOOP ===
@@ -122,20 +130,20 @@ public class InterArrivalKafkaConsumer {
     }
 
     // Method to process the CDF message from Kafka queue
-    private static void processCDFMessageAndOptimizerPassing(String messageValue, Queue queue, ServiceProcess serviceProcess, BigDecimal Rejectiontarget) {
+    private  void processCDFMessageAndOptimizerPassing(String messageValue, Queue queue, ServiceProcess serviceProcess, BigDecimal Rejectiontarget) {
         try {
             System.out.println("Processing CDF message...");
             System.out.println("Raw JSON: " + messageValue);
 
-            KafkaMessage message = objectMapper.readValue(messageValue, KafkaMessage.class);
+            this.message = objectMapper.readValue(messageValue, KafkaMessage.class);
 
             // === EXTRACT ALL FIELDS ===
-            long timestamp = message.timestamp;
-            String queueName = message.queue_name;
-            int totalSamples = message.total_samples;
-            int cdfPoints = message.cdf_points;
-            List<Double> cdfX = message.cdf_x;
-            List<Double> cdfY = message.cdf_y;
+            long timestamp = message.timeStamp;
+            String queueName = message.queueName;
+            int totalSamples = message.totalSamples;
+            int cdfPoints = message.cdfPoints;
+            List<Double> cdfX = message.cdfX;
+            List<Double> cdfY = message.cdfY;
             float mean = message.mean;
 
             // CDF data arrays
@@ -163,7 +171,7 @@ public class InterArrivalKafkaConsumer {
             System.out.println("Generating BPH arrival process...");
 
             //aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
-            expArrivalProcess = ArrivalProcessFactory.generateExponential(spline);
+            arrivalProcess = ArrivalProcessFactory.generateExponential(spline);
 
             System.out.println("BPH arrival process generated successfully");
 
@@ -173,13 +181,13 @@ public class InterArrivalKafkaConsumer {
             queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
             */
 
-            int replicas = Optimizer.minReplicaExponential(expArrivalProcess,
+            int replicas = Optimizer.minReplicaExponential(arrivalProcess,
             queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
             
 
 
 
-            K8sScaler scaler = K8sScaler.getInstance();
+            scaler = K8sScaler.getInstance();
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
                 try {

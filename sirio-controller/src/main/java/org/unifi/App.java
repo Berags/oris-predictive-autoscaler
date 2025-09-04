@@ -10,9 +10,11 @@ public class App {
     public static void main(String[] args) {
         Queue queue = new Queue(100);
         ExponentialServiceProcess serviceProcess = new ExponentialServiceProcess("1");
+
+        Controller kafkaConsumer = new Controller();
         
 
-        InterArrivalKafkaConsumer.autoConfig(queue,serviceProcess,new BigDecimal("0.05"));
-        InterArrivalKafkaConsumer.start_consuming();
+        kafkaConsumer.autoConfig(queue,serviceProcess,new BigDecimal("0.05"));
+        kafkaConsumer.startConsuming();
     }
 }
