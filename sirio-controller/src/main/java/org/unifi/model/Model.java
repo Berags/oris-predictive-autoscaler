@@ -48,10 +48,10 @@ public class Model{
             if(tmp.getTokens(queuePlace) == queue.getSize() && pn.isEnabled(arrivalTransition, tmp)){
                 BigDecimal currentRejection = results.get(tmp);
 
-                BigDecimal arrivalRate = extractLambda(arrivalTransition, tmp);
-                BigDecimal serviceRate = extractLambda(serviceTransition, tmp);
+                BigDecimal arrivalRate = extractLambda(arrivalTransition, tmp).setScale(8, RoundingMode.HALF_UP);
+                BigDecimal serviceRate = extractLambda(serviceTransition, tmp).setScale(8, RoundingMode.HALF_UP);
 
-                currentRejection = currentRejection.multiply(arrivalRate.setScale(8).divide(arrivalRate.add(serviceRate), RoundingMode.HALF_DOWN));
+                currentRejection = currentRejection.multiply(arrivalRate).divide(arrivalRate.add(serviceRate), 8, RoundingMode.HALF_DOWN);
 
                 rejection = rejection.add(currentRejection);
             }
@@ -64,7 +64,11 @@ public class Model{
         if(!st.isEXP()){
             throw new IllegalArgumentException("Give a Exponential transition feature");
         }
-        return ((EXP) st.density()).getLambda().multiply(BigDecimal.valueOf(st.clockRate().evaluate(m)));
+        BigDecimal lambda = ((EXP) st.density()).getLambda();
+        double clockRateValue = st.clockRate().evaluate(m);
+        BigDecimal clockRate = BigDecimal.valueOf(clockRateValue).setScale(10, RoundingMode.HALF_UP);
+        
+        return lambda.multiply(clockRate).setScale(10, RoundingMode.HALF_UP);
     }
 
 }

@@ -138,12 +138,12 @@ public class Controller {
             this.message = objectMapper.readValue(messageValue, KafkaMessage.class);
 
             // === EXTRACT ALL FIELDS ===
-            long timestamp = message.timeStamp;
-            String queueName = message.queueName;
-            int totalSamples = message.totalSamples;
-            int cdfPoints = message.cdfPoints;
-            List<Double> cdfX = message.cdfX;
-            List<Double> cdfY = message.cdfY;
+            long timestamp = message.timestamp;
+            String queueName = message.queue_name;
+            int totalSamples = message.total_samples;
+            int cdfPoints = message.cdf_points;
+            List<Double> cdfX = message.cdf_x;
+            List<Double> cdfY = message.cdf_y;
             float mean = message.mean;
 
             // CDF data arrays
