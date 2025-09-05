@@ -28,6 +28,8 @@ spec:
           value: "admin"
         - name: RABBITMQ_PASSWORD
           value: "password"
+        - name: SERVICE_RATE
+          value: "1"        
         resources:
           requests:
             memory: "128Mi"

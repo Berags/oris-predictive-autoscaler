@@ -2,6 +2,10 @@ import pika
 import os
 import time
 import logging
+import scipy as sc
+
+service_rate = 1.
+service_rate = float(os.getenv("SERVICE_RATE", "1"))
 
 def connect_to_rabbitmq():
     """Establishes a connection to RabbitMQ, retrying on failure."""
@@ -32,8 +36,10 @@ def connect_to_rabbitmq():
 def on_message(channel, method, properties, body):
     """Callback function to process received messages."""
     logging.info(f"Received message: {body.decode()}")
-    logging.info("Sleeping...")
-    time.sleep(1)
+    # The expon.rsv() function wants the mean value of the distribution (1 / lambda to be clear) as an argument
+    waiting_time = sc.stats.expon.rvs(scale = 1 / service_rate)
+    logging.info(f"Sleeping for {waiting_time}s (Lambda={service_rate})")
+    time.sleep(waiting_time)
     # Acknowledge the message to remove it from the queue
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
