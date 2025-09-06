@@ -3,6 +3,14 @@ import queue from 'k6/x/amqp/queue';
 import { sleep } from 'k6';
 import { Trend, Counter } from 'k6/metrics';
 import probabilityDistributions from './lib/index.js';
+import verifyLambda from './util/verifyLambda.js';
+import {
+    emaOverhead,
+    computeEffectiveRate,
+    computeRecentEffectiveRate,
+    computeTheoreticalRateFromIntervals,
+    computeCompensatedWaitMs,
+} from './util/metrics.js';
 
 const RABBITMQ_HOST = __ENV.RABBITMQ_HOST || 'localhost';
 const RABBITMQ_PORT = __ENV.RABBITMQ_PORT || '5672';
@@ -48,30 +56,7 @@ export const options = {
 
 const connID = amqp.start({ connection_url: AMQP_URL });
 
-// Lambda verification function
-function verifyLambda(intervals, expectedLambda) {
-    if (intervals.length < 100) return null; // Need minimum samples
-    
-    const mean = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
-    const expectedMean = 1 / expectedLambda;
-    const variance = intervals.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / intervals.length;
-    const expectedVariance = 1 / (expectedLambda * expectedLambda);
-    
-    const meanError = Math.abs(mean - expectedMean) / expectedMean;
-    const varianceError = Math.abs(variance - expectedVariance) / expectedVariance;
-    
-    return {
-        sampleCount: intervals.length,
-        actualMean: mean,
-        expectedMean: expectedMean,
-        meanError: meanError,
-        actualVariance: variance,
-        expectedVariance: expectedVariance,
-        varianceError: varianceError,
-        actualLambda: 1 / mean,
-        isValid: meanError < 0.1 && varianceError < 0.2 // 10% tolerance for mean, 20% for variance
-    };
-}
+// Lambda verification function moved to './utils/verifyLambda.js'
 
 
 queue.declare({
@@ -82,7 +67,7 @@ queue.declare({
 });
 
 // Poisson process function with precise rate compensation
-export function poissonProcess() {
+export const poissonProcess = () => {
     let messageCount = 0;
     const startTime = Date.now();
     const intervals = [];
@@ -102,8 +87,7 @@ export function poissonProcess() {
     const MAX_OVERHEAD_SAMPLES = 200; // Limit overhead calculation to recent samples
     
     // Pre-allocate arrays for efficiency
-    const recentOverheads = new Array(100);
-    let overheadIndex = 0;
+    // Overhead tracking handled via EMA in metrics utils
     
     // Pre-build message template to reduce JSON overhead
     const baseMsg = {
@@ -125,8 +109,7 @@ export function poissonProcess() {
         
         // Compensated waiting: account for publish overhead
         const now = Date.now();
-        const rawWaitTime = nextScheduledTime - now;
-        const compensatedWaitTime = Math.max(0, rawWaitTime - publishOverhead * 1000);
+        const compensatedWaitTime = computeCompensatedWaitMs(now, nextScheduledTime, publishOverhead);
         
         // Efficient sleep with sub-millisecond precision
         if (compensatedWaitTime > 0) {
@@ -158,16 +141,8 @@ export function poissonProcess() {
         // Update overhead estimation with moving average (more recent samples weighted more)
         if (overheadSamples < MAX_OVERHEAD_SAMPLES) {
             const actualOverhead = (postPublishTime - prePublishTime) / 1000;
-            recentOverheads[overheadIndex] = actualOverhead;
-            overheadIndex = (overheadIndex + 1) % 100;
-            
-            // Exponential moving average for recent responsiveness
             const alpha = 0.1; // Smoothing factor
-            if (overheadSamples === 0) {
-                publishOverhead = actualOverhead;
-            } else {
-                publishOverhead = alpha * actualOverhead + (1 - alpha) * publishOverhead;
-            }
+            publishOverhead = emaOverhead(overheadSamples === 0 ? undefined : publishOverhead, actualOverhead, alpha);
             overheadSamples++;
         }
         
@@ -192,30 +167,13 @@ export function poissonProcess() {
         const elapsed = (Date.now() - startTime) / 1000;
         
         // 1. True effective output rate (based on actual publish timestamps)
-        let effectiveOutputRate;
-        if (publishTimestamps.length >= 2) {
-            const timeSpan = (publishTimestamps[publishTimestamps.length - 1] - publishTimestamps[0]) / 1000;
-            effectiveOutputRate = (publishTimestamps.length - 1) / timeSpan;
-        } else {
-            effectiveOutputRate = messageCount / elapsed;
-        }
-        
+        const effectiveOutputRate = computeEffectiveRate(publishTimestamps);
+            
         // 2. Recent effective rate (last 100 messages for responsiveness)
-        let recentEffectiveRate = effectiveOutputRate;
-        const RECENT_COUNT = Math.min(100, publishTimestamps.length);
-        if (publishTimestamps.length >= RECENT_COUNT) {
-            const recentTimestamps = publishTimestamps.slice(-RECENT_COUNT);
-            const recentTimeSpan = (recentTimestamps[recentTimestamps.length - 1] - recentTimestamps[0]) / 1000;
-            recentEffectiveRate = (recentTimestamps.length - 1) / recentTimeSpan;
-        }
-        
+        const recentEffectiveRate = computeRecentEffectiveRate(publishTimestamps, 100) || (messageCount / elapsed);
+            
         // 3. Theoretical rate from intervals (for Poisson validation)
-        let theoreticalRate = LAMBDA;
-        if (intervals.length >= 50) {
-            const recentIntervals = intervals.slice(-50);
-            const avgInterval = recentIntervals.reduce((sum, i) => sum + i, 0) / recentIntervals.length;
-            theoreticalRate = 1 / avgInterval;
-        }
+        const theoreticalRate = computeTheoreticalRateFromIntervals(intervals, 50) || LAMBDA;
         
         // Update metrics with most accurate rate
         actualRateTrend.add(recentEffectiveRate);
@@ -253,7 +211,7 @@ export function poissonProcess() {
 }
 
 // Constant arrival rate function (standard K6 approach)
-export function constantSend() {
+export const constantSend = () => {
     const msg = JSON.stringify({ 
         timestamp: Date.now(),
         distribution: 'constant',
@@ -270,7 +228,7 @@ export function constantSend() {
 }
 
 // Legacy function for compatibility
-export function send() {
+export const send = () => {
     const msg = JSON.stringify({ ts: Date.now() });
 
     amqp.publish({
@@ -282,7 +240,7 @@ export function send() {
     });
 }
 
-export function teardown() {
+export const teardown = () => {
     console.log('\n=== FINAL LAMBDA VERIFICATION SUMMARY ===');
     console.log(`Expected λ: ${LAMBDA} arrivals/sec`);
     console.log(`Total verification samples: ${lambdaVerificationCounter.count || 0}`);

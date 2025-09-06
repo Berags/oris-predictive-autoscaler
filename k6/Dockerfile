@@ -13,6 +13,7 @@ COPY --from=builder /k6 /usr/bin/k6
 
 RUN mkdir -p /k6/lib
 COPY lib/ /k6/lib/
+COPY util/ /k6/util/
 
 WORKDIR /k6
 ENTRYPOINT ["k6"]
