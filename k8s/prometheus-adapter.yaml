@@ -1,4 +1,27 @@
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adapter-config
+  namespace: oris-predictive-autoscaler
+  labels:
+    app: adapter-config
+data:
+  config.yaml: |
+    externalRules:
+    - seriesQuery: '{__name__=~"rabbitmq_global_messages_dead_lettered_maxlen_total|rabbitmq_global_messages_received_total"}'
+      resources:
+        overrides:
+          namespace:
+            resource: "namespace"
+      name:
+        matches: "^.*"
+        as: "rejection_rate"
+      metricsQuery: 'sum(rate(rabbitmq_global_messages_dead_lettered_maxlen_total[1m])) / (sum(rate(rabbitmq_global_messages_received_total[1m])) + 0.001)'
+
+# The following command will show the value scraped from Prometheus as a Kubernetes API
+# kubectl get --raw "/apis/external.metrics.k8s.io/v1beta1/namespaces/oris-predictive-autoscaler/rejection_rate" | jq
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
