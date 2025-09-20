@@ -18,19 +18,40 @@ const RABBITMQ_USER = __ENV.RABBITMQ_USER || 'admin';
 const RABBITMQ_PASSWORD = __ENV.RABBITMQ_PASSWORD || 'password';
 const QUEUE_NAME = 'message-queue';
 
-// Test parameters. They are rewritten in the .sh
-const LAMBDA = parseFloat(__ENV.LAMBDA) || 10; // arrival rate per second
-const TEST_DURATION = __ENV.TEST_DURATION || '30s';
-const DISTRIBUTION = __ENV.DISTRIBUTION || 'constant'; // 'constant' or 'poisson'
 
+const LAMBDA_ARRAY_JSON = __ENV.LAMBDA_ARRAY || '[3]'; // arrival rate per second
+const TEST_DURATION = __ENV.TEST_DURATION || '30s';
+const DISTRIBUTION = __ENV.DISTRIBUTION || 'poisson'; // 'constant' or 'poisson'
 const AMQP_URL = `amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/`;
+
+let LAMBDA_ARRAY;
+try {
+    LAMBDA_ARRAY = JSON.parse(LAMBDA_ARRAY_JSON);
+} catch (e) {
+    console.log('Error parsing LAMBDA_ARRAY, using default [3]');
+    LAMBDA_ARRAY = [3];
+}
+
+console.log(`Lambda values to test: [${LAMBDA_ARRAY.join(', ')}]`);
+
+
+
 console.log(`RabbitMQ connection: ${AMQP_URL}`);
-console.log(`Test distribution: ${DISTRIBUTION}, λ=${LAMBDA} arrivals/sec, duration: ${TEST_DURATION}`);
+console.log(`Test distribution: ${DISTRIBUTION}, λ=${LAMBDA_ARRAY_JSON} arrivals/sec, duration: ${TEST_DURATION}`);
+
+
 
 // Metrics for lambda verification
 const intervalTrend = new Trend('poisson_intervals');
 const actualRateTrend = new Trend('actual_rate');
 const lambdaVerificationCounter = new Counter('lambda_verification_samples');
+
+
+let i=0;
+
+let lambda = LAMBDA_ARRAY[i];
+
+
 
 export const options = {
     scenarios: DISTRIBUTION === 'poisson' ? {
@@ -44,7 +65,7 @@ export const options = {
     } : {
         constant_arrivals: {
             executor: 'constant-arrival-rate',
-            rate: LAMBDA,
+            rate: lambda,
             timeUnit: '1s',
             duration: TEST_DURATION,
             preAllocatedVUs: 10,
@@ -66,6 +87,9 @@ queue.declare({
     args: { 'x-max-length': 100 },
 });
 
+
+
+
 // Poisson process function with precise rate compensation
 export const poissonProcess = () => {
     let messageCount = 0;
@@ -73,11 +97,11 @@ export const poissonProcess = () => {
     const intervals = [];
     const publishTimestamps = []; // Track actual publish times for rate calculation
     
-    console.log(`Starting COMPENSATED Poisson process with TARGET OUTPUT RATE λ=${LAMBDA} for duration: ${TEST_DURATION}`);
+    console.log(`Starting COMPENSATED Poisson process with TARGET OUTPUT RATE λ=${lambda} for duration: ${TEST_DURATION} ms`);
     
-    // Pre-generate large batch to minimize overhead
-    const BATCH_SIZE = 50000; // Larger batch for better efficiency
-    let interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, LAMBDA);
+   
+    const BATCH_SIZE = 1; // Larger batch for better efficiency
+    let interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, lambda);
     let batchIndex = 0;
     
     // Timing compensation variables
@@ -92,13 +116,28 @@ export const poissonProcess = () => {
     // Pre-build message template to reduce JSON overhead
     const baseMsg = {
         distribution: 'poisson',
-        lambda: LAMBDA
+        lambda: lambda
     };
     
+    // exp transition, to define the rate
+    //let nextLoadTime = Date.now() + (probabilityDistributions.rexp(1, 0.02)[0] * 1000);
+    let nextLoadTime = Date.now() + (50 * 1000); //change after 50 seconds
     while (true) {
+        if (Date.now() >= nextLoadTime) {
+            i++;
+            let oldLambda = lambda;
+            lambda = LAMBDA_ARRAY[i % LAMBDA_ARRAY.length];
+            console.log(` LOAD TRANSITION: λ changed from ${oldLambda} to ${lambda}`);
+            baseMsg.lambda = lambda;
+            interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, lambda);
+            batchIndex = 0;
+            // exp transition, to define the rate
+            //nextLoadTime = Date.now() + (probabilityDistributions.rexp(1, 0.02)[0] * 1000);
+            nextLoadTime = Date.now() + (50 * 1000); //change after 50 seconds
+        }
         // Batch regeneration with minimal overhead
         if (batchIndex >= BATCH_SIZE) {
-            interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, LAMBDA);
+            interArrivalTimes = probabilityDistributions.rexp(BATCH_SIZE, lambda);
             batchIndex = 0;
         }
         
@@ -173,18 +212,18 @@ export const poissonProcess = () => {
         const recentEffectiveRate = computeRecentEffectiveRate(publishTimestamps, 100) || (messageCount / elapsed);
             
         // 3. Theoretical rate from intervals (for Poisson validation)
-        const theoreticalRate = computeTheoreticalRateFromIntervals(intervals, 50) || LAMBDA;
+        const theoreticalRate = computeTheoreticalRateFromIntervals(intervals, 50) || lambda;
         
         // Update metrics with most accurate rate
         actualRateTrend.add(recentEffectiveRate);
         
         // Comprehensive verification every 500 messages
         if (messageCount % 500 === 0) {
-            const verification = verifyLambda(intervals.slice(-500), LAMBDA); // Use recent 500 samples
+            const verification = verifyLambda(intervals.slice(-500), lambda); // Use recent 500 samples
             if (verification) {
                 console.log(`=== PRECISE RATE VERIFICATION (${messageCount} msgs) ===`);
-                console.log(`  TARGET OUTPUT RATE: ${LAMBDA} msg/sec`);
-                console.log(`  Effective output rate: ${recentEffectiveRate.toFixed(4)} msg/sec (${((recentEffectiveRate/LAMBDA)*100).toFixed(2)}% of target)`);
+                console.log(`  TARGET OUTPUT RATE: ${lambda} msg/sec`);
+                console.log(`  Effective output rate: ${recentEffectiveRate.toFixed(4)} msg/sec (${((recentEffectiveRate/lambda)*100).toFixed(2)}% of target)`);
                 console.log(`  Cumulative output rate: ${(messageCount/elapsed).toFixed(4)} msg/sec`);
                 console.log(`  Theoretical λ from intervals: ${theoreticalRate.toFixed(4)} (${verification.isValid ? 'VALID' : 'INVALID'} Poisson)`);
                 console.log(`  Mean interval error: ${(verification.meanError * 100).toFixed(2)}%`);
@@ -193,19 +232,19 @@ export const poissonProcess = () => {
                 console.log(`  Scheduling accuracy: ${((nextScheduledTime - Date.now())/1000).toFixed(3)}s ahead`);
                 
                 // Rate control feedback
-                const rateError = ((recentEffectiveRate - LAMBDA) / LAMBDA) * 100;
+                const rateError = ((recentEffectiveRate - lambda) / lambda) * 100;
                 if (Math.abs(rateError) > 2) {
-                    console.log(`  ⚠️  Rate deviation: ${rateError.toFixed(2)}% from target`);
+                    console.log(` Rate deviation: ${rateError.toFixed(2)}% from target`);
                 } else {
-                    console.log(`  ✅ Rate accuracy: within ±2% of target`);
+                    console.log(` Rate accuracy: within ±2% of target`);
                 }
             }
         }
         
         // Lightweight progress logging every 100 messages
         if (messageCount % 100 === 0 && messageCount % 500 !== 0) {
-            const accuracyPercent = ((recentEffectiveRate / LAMBDA) * 100).toFixed(1);
-            console.log(`[${messageCount}] Effective rate: ${recentEffectiveRate.toFixed(3)} msg/sec (${accuracyPercent}% of target λ=${LAMBDA})`);
+            const accuracyPercent = ((recentEffectiveRate / lambda) * 100).toFixed(1);
+            console.log(`[${messageCount}] Effective rate: ${recentEffectiveRate.toFixed(3)} msg/sec (${accuracyPercent}% of target λ=${lambda})`);
         }
     }
 }
@@ -215,7 +254,7 @@ export const constantSend = () => {
     const msg = JSON.stringify({ 
         timestamp: Date.now(),
         distribution: 'constant',
-        lambda: LAMBDA
+        lambda: lambda
     });
 
     amqp.publish({
@@ -241,15 +280,16 @@ export const send = () => {
 }
 
 export const teardown = () => {
+    /*
     console.log('\n=== FINAL LAMBDA VERIFICATION SUMMARY ===');
-    console.log(`Expected λ: ${LAMBDA} arrivals/sec`);
+    console.log(`Expected λ: ${lambda} arrivals/sec`);
     console.log(`Total verification samples: ${lambdaVerificationCounter.count || 0}`);
     
     // Final summary will be shown in K6 metrics
     console.log('Check the metrics output for detailed statistics:');
     console.log('- poisson_intervals: distribution of inter-arrival times');
     console.log('- actual_rate: measured arrival rate over time');
-    console.log('- lambda_verification_samples: total samples used for verification');
+    console.log('- lambda_verification_samples: total samples used for verification');*/
     
     try { amqp.close(connID); } catch (_) { }
 }
