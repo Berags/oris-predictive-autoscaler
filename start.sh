@@ -29,7 +29,6 @@ kubectl apply -n $NAMESPACE -f k8s/service.yaml
 kubectl apply -n $NAMESPACE -f k8s/kafka.yaml
 kubectl wait --for=condition=ready pod -l app=kafka -n $NAMESPACE --timeout=120s
 
-
 echo "==> Verifying Kafka is fully operational..."
 echo "Waiting 30 seconds for Kafka internal initialization..."
 sleep 30
@@ -56,7 +55,6 @@ else
 	' || echo "Topic creation/listing encountered a non-fatal error."
 fi
 
-
 kubectl apply -n $NAMESPACE -f k8s/prometheus.yaml
 kubectl wait --for=condition=ready pod -l app=prometheus -n $NAMESPACE --timeout=30s
 
@@ -75,6 +73,10 @@ kubectl wait --for=condition=ready pod -l app=inter-arrival-collector -n $NAMESP
 kubectl apply -n $NAMESPACE -f k8s/sirio-controller-rbac.yaml
 kubectl apply -n $NAMESPACE -f k8s/sirio-controller.yaml
 kubectl wait --for=condition=ready pod -l app=sirio-controller -n $NAMESPACE --timeout=60s
+
+kubectl apply -f k8s/prometheus-adapter.yaml
+kubectl apply -f k8s/api-service-rbac.yaml
+kubectl create -n $NAMESPACE -f k8s/api-service.yaml || true
 
 echo "==> Initial pod status"
 kubectl get pods -n $NAMESPACE

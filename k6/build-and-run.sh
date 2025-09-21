@@ -33,7 +33,7 @@ RABBITMQ_USER="${RABBITMQ_USER:-admin}"
 RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-password}"
 RABBITMQ_PORT="${RABBITMQ_PORT:-5672}"
 TEST_DURATION="${TEST_DURATION:-600s}"
-LAMBDA="${LAMBDA:-2}"          # Target arrival rate (messages per second)
+LAMBDA="${LAMBDA:-4}"          # Target arrival rate (messages per second)
 DISTRIBUTION="${DISTRIBUTION:-poisson}"  # Arrival distribution
 
 
