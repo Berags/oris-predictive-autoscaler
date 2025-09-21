@@ -78,4 +78,7 @@ kubectl apply -f k8s/prometheus-adapter.yaml
 kubectl apply -f k8s/api-service-rbac.yaml
 kubectl create -n $NAMESPACE -f k8s/api-service.yaml || true
 
+# Allow to fetch CPU/Mem usage from kuberenetes APIs (as kubectl top pods -A)
+kubectl apply -f k8s/components.yaml
+
 ./port-forward.sh
