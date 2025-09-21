@@ -27,8 +27,29 @@ spec:
           value: "sirio-controller-group"
         resources:
           limits:
-            memory: "512Mi"
+            memory: "1024Mi"
             cpu: "500m"
           requests:
             memory: "256Mi"
             cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sirio-controller-service
+  namespace: oris-predictive-autoscaler
+  labels:
+    app: sirio-controller
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9010
+    targetPort: 9010
+    protocol: TCP
+    name: jmx
+  - port: 9010
+    targetPort: 9010
+    protocol: UDP
+    name: jmx
+  selector:
+    app: sirio-controller

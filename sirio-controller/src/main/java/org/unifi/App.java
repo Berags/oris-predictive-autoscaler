@@ -12,7 +12,6 @@ public class App {
         ExponentialServiceProcess serviceProcess = new ExponentialServiceProcess("1");
 
         Controller kafkaConsumer = new Controller();
-        
 
         kafkaConsumer.autoConfig(queue,serviceProcess,new BigDecimal("0.05"));
         kafkaConsumer.startConsuming();

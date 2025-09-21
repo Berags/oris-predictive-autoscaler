@@ -17,11 +17,14 @@ kubectl port-forward -n $NAMESPACE svc/kafka-service 9092:9092 \
 	& pid_kafka=$!
 kubectl port-forward -n $NAMESPACE svc/kube-state-metrics 8080:8080 \
 	& pid_kube_state=$!
+kubectl port-forward -n $NAMESPACE svc/sirio-controller-service 9010:9010 \
+	& pid_sirio=$!
 
-trap 'echo "\n==>  Stopping port-forward"; kill $pid_rmq_mgmt $pid_rmq_amqp $pid_prom $pid_graf $pid_kafdrop $pid_kafka 2>/dev/null || true' INT TERM
+trap 'echo "\n==>  Stopping port-forward"; kill $pid_rmq_mgmt $pid_rmq_amqp $pid_prom $pid_graf $pid_kafdrop $pid_kafka $pid_sirio 2>/dev/null || true' INT TERM
 
 echo " - RabbitMQ:  http://localhost:15672"
 echo " - Prometheus: http://localhost:9090"
 echo " - Grafana:    http://localhost:3000"
 echo " - Kafdrop:    http://localhost:9000"
+echo " (for jconsole localhost:9010)"
 wait
