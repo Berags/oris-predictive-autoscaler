@@ -19,4 +19,6 @@ spec:
       target:
         type: AverageValue
         averageValue: 0.0001
-  
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 5

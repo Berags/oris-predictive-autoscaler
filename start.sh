@@ -3,7 +3,7 @@ set -euo pipefail
 NAMESPACE=oris-predictive-autoscaler
 
 echo "==> Resetting containers environment"
-kubectl delete deployment,pods,service,statefulset -n oris-predictive-autoscaler --all --ignore-not-found=true
+kubectl delete deployment,pods,service,statefulset,hpa -n oris-predictive-autoscaler --all --ignore-not-found=true
 
 echo "==> Creating/updating namespace"
 kubectl apply -f k8s/namespace.yaml
@@ -78,31 +78,4 @@ kubectl apply -f k8s/prometheus-adapter.yaml
 kubectl apply -f k8s/api-service-rbac.yaml
 kubectl create -n $NAMESPACE -f k8s/api-service.yaml || true
 
-echo "==> Initial pod status"
-kubectl get pods -n $NAMESPACE
-
-echo "==> Waiting for main components (rabbitmq, prometheus, grafana, kafka, kafdrop, sirio-controller)" 
-
-echo "==> Starting port-forward (Ctrl+C to close)"
-kubectl port-forward -n $NAMESPACE svc/rabbitmq-service 15672:15672 \
-	& pid_rmq_mgmt=$!
-kubectl port-forward -n $NAMESPACE svc/rabbitmq-service 5672:5672 \
-	& pid_rmq_amqp=$!
-kubectl port-forward -n $NAMESPACE svc/prometheus 9090:9090 \
-	& pid_prom=$!
-kubectl port-forward -n $NAMESPACE svc/grafana 3000:3000 \
-	& pid_graf=$!
-kubectl port-forward -n $NAMESPACE svc/kafdrop 9000:9000 \
-	& pid_kafdrop=$!
-kubectl port-forward -n $NAMESPACE svc/kafka-service 9092:9092 \
-	& pid_kafka=$!
-kubectl port-forward -n $NAMESPACE svc/kube-state-metrics 8080:8080 \
-	& pid_kube_state=$!
-
-trap 'echo "\n==>  Stopping port-forward"; kill $pid_rmq_mgmt $pid_rmq_amqp $pid_prom $pid_graf $pid_kafdrop $pid_kafka 2>/dev/null || true' INT TERM
-
-echo " - RabbitMQ:  http://localhost:15672"
-echo " - Prometheus: http://localhost:9090"
-echo " - Grafana:    http://localhost:3000"
-echo " - Kafdrop:    http://localhost:9000"
-wait
+./port-forward.sh
