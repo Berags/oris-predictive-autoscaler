@@ -46,9 +46,8 @@ const K6_IMAGE_NAME = process.env.K6_IMAGE_NAME || 'k6-amqp:latest';
 const SCRIPT_DIR = process.env.SCRIPT_DIR || __dirname;
 
 
-function showMenu(){
+const showMenu = () => {
     console.log("---Distribution Test Menu---");
-    
     console.log("1. Binomial");
     console.log("2. Beta");
     console.log("3. Cauchy");
@@ -67,32 +66,21 @@ function showMenu(){
 
 }
 
-
-function askLambdaValues(distributionType) {
-    console.log(`\nConfiguring ${distributionType} distribution test:`);
-    
-    
-    if (distributionType.toLowerCase() === 'poisson') {
+const distributionHandlers = {
+    'poisson': () => {
+        const distributionType = 'poisson';
+        console.log(`\nConfiguring ${distributionType} distribution test:`);
         rl.question('Enter lambda values separated by commas (e.g., 3,5,10; one for each load state) [default: 3]: ', (input) => {
-                
-            // Parse lambda values
             let lambdaArray;
             if (input.trim() === '') {
-                lambdaArray = [3]; // Default value
+                lambdaArray = [3];
             } else {
-                lambdaArray = input.split(',')
-                    .map(val => parseFloat(val.trim()))
-                    .filter(val => !isNaN(val) && val > 0);
-                    
+                lambdaArray = input.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val) && val > 0);
                 if (lambdaArray.length === 0) {
                     console.log('Invalid lambda values. Using default: [3]');
                     lambdaArray = [3];
                 }
             }
-                
-                
-            // Lambda validation for Poisson distribution
-                
             lambdaArray = lambdaArray.map(lambda => {
                 if (lambda >= 100) {
                     console.log(`Warning: λ=${lambda} >= 100 may cause performance issues. Using λ=99.`);
@@ -100,157 +88,106 @@ function askLambdaValues(distributionType) {
                 }
                 return lambda;
             });
-                
             console.log(`Selected lambda values: [${lambdaArray.join(', ')}]`);
-
-
             rl.question('Enter test duration [in seconds; default: 600]: ', (durationInput) => {
-
-                // Parse duration
                 let duration = parseInt(durationInput.trim()) || 600;
                 console.log(`Test duration: ${duration} seconds`);
-
-                // Start the k6 test with the selected distribution and parameters
                 runK6Test(distributionType, lambdaArray, duration);
             });
         });
-
-    }else if (distributionType.toLowerCase() === 'uniform') {
+    },
+    'uniform': () => {
+        const distributionType = 'uniform';
+        console.log(`\nConfiguring ${distributionType} distribution test:`);
         rl.question('Enter min and max values separated by a comma and separate each couple with ;. One couple for each load state (e.g., 1,10; 2,8) [default: 1,10]: ', (input) => {
-
-        // Parse min-max pairs
-        let lambdaArray;
-        if (input.trim() === '') {
-            lambdaArray = [[1, 10]]; // Default values as array of pairs
-        } else {
-            // Split by semicolon to get each couple
-            const couples = input.split(';');
-            lambdaArray = couples.map(couple => {
-                const values = couple.split(',')
-                    .map(val => parseFloat(val.trim()))
-                    .filter(val => !isNaN(val));
-                
-                // Each couple should have exactly 2 values (min, max)
-                if (values.length === 2) {
-                    const [min, max] = values;
-                    if (min < max) {
-                        return [min, max];
-                    } else {
-                        console.log(`Warning: Invalid range [${min}, ${max}]. Min should be < Max. Using [${Math.min(min, max)}, ${Math.max(min, max)}]`);
-                        return [Math.min(min, max), Math.max(min, max)];
-                    }
-                } else {
-                    console.log(`Warning: Invalid couple "${couple.trim()}". Should have exactly 2 values. Skipping.`);
-                    return null;
-                }
-            }).filter(pair => pair !== null); // Remove invalid pairs
-            
-            // If no valid pairs found, use default
-            if (lambdaArray.length === 0) {
-                console.log('No valid min-max pairs found. Using default: [1,10]');
+            let lambdaArray;
+            if (input.trim() === '') {
                 lambdaArray = [[1, 10]];
+            } else {
+                const couples = input.split(';');
+                lambdaArray = couples.map(couple => {
+                    const values = couple.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val));
+                    if (values.length === 2) {
+                        const [min, max] = values;
+                        if (min < max) {
+                            return [min, max];
+                        } else {
+                            console.log(`Warning: Invalid range [${min}, ${max}]. Min should be < Max. Using [${Math.min(min, max)}, ${Math.max(min, max)}]`);
+                            return [Math.min(min, max), Math.max(min, max)];
+                        }
+                    } else {
+                        console.log(`Warning: Invalid couple "${couple.trim()}". Should have exactly 2 values. Skipping.`);
+                        return null;
+                    }
+                }).filter(pair => pair !== null);
+                if (lambdaArray.length === 0) {
+                    console.log('No valid min-max pairs found. Using default: [1,10]');
+                    lambdaArray = [[1, 10]];
+                }
             }
-        }
-        
-        console.log(`Selected min-max pairs: [${lambdaArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}]`);
-        rl.question('Enter test duration [in seconds; default: 600]: ', (durationInput) => {
-
-                // Parse duration
+            console.log(`Selected min-max pairs: [${lambdaArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}]`);
+            rl.question('Enter test duration [in seconds; default: 600]: ', (durationInput) => {
                 let duration = parseInt(durationInput.trim()) || 600;
                 console.log(`Test duration: ${duration} seconds`);
-
-                // Start the k6 test with the selected distribution and parameters
                 runK6Test(distributionType, lambdaArray, duration);
             });
         });
+    },
+    'default': () => {
+        console.log('This distribution is not implemented yet.');
+        setTimeout(() => menu(), 1000);
     }
-}
+};
 
-function askForChoice() {
+const getParameter = (distributionType) => {
+    const distribution = distributionType.toLowerCase();
+    const handler = distributionHandlers[distribution] || distributionHandlers['default'];
+    handler();
+};
+
+const menu = () => {
     showMenu();                                    
     rl.question('Insert your choice: ', handleChoice);
 }
 
-function handleChoice(choice) {
-    switch (choice.trim()) {
-        case '1':
-            console.log('Initializing Binomial distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '2':
-            console.log('Initializing Beta distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '3':
-            console.log('Initializing Cauchy distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '4':
-            console.log('Initializing Chi-Squared distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '5':
-            console.log('Initializing Exponential distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '6':
-            console.log('Initializing F distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '7':
-            console.log('Initializing Gamma distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;
-        case '8':
-            console.log('Initializing Laplace distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break;             
-        case '9':
-            console.log('Initializing Log-Normal distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break; 
-        case '10':
-            console.log('Initializing Negative-Binomial distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break; 
-        case '11':
-            console.log('Initializing Normal distribution.');
-            console.log('This distribution is not implemented yet.');
-            setTimeout(() => askForChoice(), 1000);
-            break; 
-        case '12':
-            console.log('Initializing Poisson distribution (λ<100).');
-            askLambdaValues('poisson');
-            break; 
-        case '13':
-            console.log('Initializing Uniform distribution.');
-            askLambdaValues('uniform');
-            break; 
-        case '14':
-            console.log('Exiting program. Goodbye!');
-            rl.close();
-            return; 
-        default:
-            console.log('Invalid choice, please try again.');
-            askForChoice();
+const menuActions = {
+    '1': { name: 'Binomial', handler: () => getParameter('binomial') },
+    '2': { name: 'Beta', handler: () => getParameter('beta') },
+    '3': { name: 'Cauchy', handler: () => getParameter('cauchy') },
+    '4': { name: 'Chi-Squared', handler: () => getParameter('chi-squared') },
+    '5': { name: 'Exponential', handler: () => getParameter('exponential') },
+    '6': { name: 'F', handler: () => getParameter('f') },
+    '7': { name: 'Gamma', handler: () => getParameter('gamma') },
+    '8': { name: 'Laplace', handler: () => getParameter('laplace') },
+    '9': { name: 'Log-Normal', handler: () => getParameter('log-normal') },
+    '10': { name: 'Negative-Binomial', handler: () => getParameter('negative-binomial') },
+    '11': { name: 'Normal', handler: () => getParameter('normal') },
+    '12': { name: 'Poisson (λ<100)', handler: () => getParameter('poisson') },
+    '13': { name: 'Uniform', handler: () => getParameter('uniform') },
+    '14': { name: 'Exit', handler: () => {
+        console.log('Exiting program. Goodbye!');
+        rl.close();
+    }}
+};
+
+const handleChoice = (choice) => {
+    const action = menuActions[choice.trim()];
+
+    if (action) {
+        if (action.name !== 'Exit') {
+            console.log(`Initializing ${action.name} distribution.`);
+        }
+        action.handler();
+    } else {
+        console.log('Invalid choice, please try again.');
+        setTimeout(menu, 1000);
     }
-}
+};
 
 
-function runK6Test(distributionType, paramArray = [3], duration = 600) {
+const runK6Test = (distributionType, paramArray = [3], duration = 600) => {
     console.log(`\n Starting k6 RabbitMQ test with ${distributionType} distribution...`);
     
-    // Better logging for uniform vs poisson
     if (Array.isArray(paramArray[0])) {
         console.log(` Parameters: ranges=[${paramArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
     } else {
@@ -262,7 +199,6 @@ function runK6Test(distributionType, paramArray = [3], duration = 600) {
 
     const paramJson = JSON.stringify(paramArray);
     
-    // Usa Docker per lanciare k6 (come nel build-and-run.sh originale)
     currentDockerProcess = spawn('docker', [
         'run', '--rm',
         '--network', 'host',
@@ -280,7 +216,7 @@ function runK6Test(distributionType, paramArray = [3], duration = 600) {
     });
 
     currentDockerProcess.on('close', (code) => {
-        currentDockerProcess = null; // Clear the reference
+        currentDockerProcess = null;
         
         if (code === 0) {
             console.log(`\n k6 test with ${distributionType} distribution completed successfully!`);
@@ -292,19 +228,19 @@ function runK6Test(distributionType, paramArray = [3], duration = 600) {
         
         console.log('\n Press Enter to return to menu...');
         process.stdin.once('data', () => {
-            askForChoice();
+            menu();
         });
     });
 
     currentDockerProcess.on('error', (error) => {
-        currentDockerProcess = null; // Clear the reference
+        currentDockerProcess = null;
         console.error(` Error running Docker k6: ${error.message}`);
         console.log(' Make sure Docker is running and the k6 image is built');
         
         setTimeout(() => {
-            askForChoice();
+            menu();
         }, 2000);
     });
 }
 
-askForChoice(); // Avvia il programma
+menu();
