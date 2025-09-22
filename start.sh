@@ -8,18 +8,6 @@ kubectl delete deployment,pods,service,statefulset,hpa -n oris-predictive-autosc
 echo "==> Creating/updating namespace"
 kubectl apply -f k8s/namespace.yaml
 
-echo "==> Building Python services image (consumer, cdf-service)"
-docker build -t oris-python-service:latest ./service/
-echo "==> Building inter-arrival collector image"
-docker build -t inter-arrival-collector:latest ./inter-arrival-collector/
-echo "==> ☕ Building Java sirio-controller image"
-docker build -t sirio-controller:latest --build-arg SKIP_TESTS=true ./sirio-controller/
-
-echo "==> Loading images into Minikube"
-minikube image load oris-python-service:latest
-minikube image load inter-arrival-collector:latest
-minikube image load sirio-controller:latest
-
 echo "==>  Applying core manifests"
 kubectl apply -n $NAMESPACE -f k8s/rabbitmq-config.yaml
 kubectl apply -n $NAMESPACE -f k8s/rabbitmq.yaml
@@ -29,9 +17,17 @@ kubectl apply -n $NAMESPACE -f k8s/service.yaml
 kubectl apply -n $NAMESPACE -f k8s/kafka.yaml
 kubectl wait --for=condition=ready pod -l app=kafka -n $NAMESPACE --timeout=120s
 
-echo "==> Verifying Kafka is fully operational..."
-echo "Waiting 30 seconds for Kafka internal initialization..."
-sleep 30
+echo "==> Building Python services image (consumer, cdf-service)"
+docker build -t oris-python-service:latest ./service/
+echo "==> Building inter-arrival collector image"
+docker build -t inter-arrival-collector:latest ./inter-arrival-collector/
+echo "==> Building Java sirio-controller image"
+docker build -t sirio-controller:latest --build-arg SKIP_TESTS=true ./sirio-controller/
+
+echo "==> Loading images into Minikube"
+minikube image load oris-python-service:latest
+minikube image load inter-arrival-collector:latest
+minikube image load sirio-controller:latest
 
 echo "==> Creating Kafka topic(s)"
 TOPIC_NAME="inter-arrival-cdf"

@@ -35,7 +35,7 @@ COPY --from=build /build/target/sirio-controller-1.0-SNAPSHOT.jar app.jar
 
 # Improve startup (Java 21) and footprint size
 ENV JAVA_OPTS="-XX:+UseContainerSupport \
-	-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError \
+	-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Xmx768M\
 	-Dcom.sun.management.jmxremote \
 	-Dcom.sun.management.jmxremote.port=9010 \
 	-Dcom.sun.management.jmxremote.rmi.port=9010 \

@@ -90,7 +90,7 @@ public class Controller {
 
     }
 
-    public void autoConfigBHP(Queue q, ServiceProcess service, BigDecimal rejection, int phases){
+    public void autoConfigBPH(Queue q, ServiceProcess service, BigDecimal rejection, int phases){
         useBHP = true;
         this.phases = phases;
         autoConfig(q, service, rejection);
