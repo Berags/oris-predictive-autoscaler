@@ -6,12 +6,8 @@ So, the menu is executed locally, but it launches k6 in a Docker container.
 
 */
 
-
-
-
 import readline from 'readline';
 import { spawn } from 'child_process';
-
 
 const rl = readline.createInterface({
     input: process.stdin,   
@@ -251,36 +247,34 @@ function handleChoice(choice) {
 }
 
 
-function runK6Test(distributionType, lambdaArray = [3], duration = 600) {
+function runK6Test(distributionType, paramArray = [3], duration = 600) {
     console.log(`\n Starting k6 RabbitMQ test with ${distributionType} distribution...`);
     
     // Better logging for uniform vs poisson
-    if (Array.isArray(lambdaArray[0])) {
-        console.log(` Parameters: ranges=[${lambdaArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
+    if (Array.isArray(paramArray[0])) {
+        console.log(` Parameters: ranges=[${paramArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
     } else {
-        console.log(` Parameters: λ=[${lambdaArray.join(', ')}], duration=${duration} seconds`);
+        console.log(` Parameters: λ=[${paramArray.join(', ')}], duration=${duration} seconds`);
     }
     
     console.log(` RabbitMQ: ${RABBITMQ_USER}@${RABBITMQ_HOST}:${RABBITMQ_PORT}`);
     console.log(' Press Ctrl+C to stop the test at any time\n');
 
-    const lambdaJson = JSON.stringify(lambdaArray);
+    const paramJson = JSON.stringify(paramArray);
     
     // Usa Docker per lanciare k6 (come nel build-and-run.sh originale)
     currentDockerProcess = spawn('docker', [
         'run', '--rm',
         '--network', 'host',
-        '-v', `${SCRIPT_DIR}:/scripts`,
-        '-v', `${process.cwd()}:/output`,
         '-e', `RABBITMQ_HOST=${RABBITMQ_HOST}`,
         '-e', `RABBITMQ_USER=${RABBITMQ_USER}`,
         '-e', `RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}`,
         '-e', `RABBITMQ_PORT=${RABBITMQ_PORT}`,
         '-e', `TEST_DURATION=${duration}s`,
-         '-e', `LAMBDA_ARRAY=${lambdaJson}`, 
+        '-e', `PARAM_ARRAY=${paramJson}`, 
         '-e', `DISTRIBUTION=${distributionType.toLowerCase()}`,
         K6_IMAGE_NAME,
-        'run', '/scripts/rabbitmq-test.js'
+        'run', '/k6/rabbitmq-test.js'
     ], {
         stdio: 'inherit'
     });
@@ -312,7 +306,5 @@ function runK6Test(distributionType, lambdaArray = [3], duration = 600) {
         }, 2000);
     });
 }
-
-
 
 askForChoice(); // Avvia il programma
