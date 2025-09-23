@@ -72,11 +72,6 @@ public class K8sScaler {
 
     public void scaleWorkload(int replicas) throws ApiException {
 
-        if(this.replicas == replicas) {
-            System.out.println("No scaling needed, already at " + replicas + " replicas.");
-            return;
-        }
-        
         System.out.println("Starting scaling operation...");
         System.out.println("  Deployment: " + this.scaleName);
         System.out.println("  Namespace: " + this.namespace);

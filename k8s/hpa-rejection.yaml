@@ -1,0 +1,24 @@
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: python-service
+  namespace: oris-predictive-autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: python-service
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: External
+    external:
+      metric:
+        name: rejection_rate
+      target:
+        type: AverageValue
+        averageValue: 0.05
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 5

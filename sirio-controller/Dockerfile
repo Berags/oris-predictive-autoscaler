@@ -34,7 +34,16 @@ ENV KAFKA_BOOTSTRAP_SERVERS=kafka-service.oris-predictive-autoscaler.svc.cluster
 COPY --from=build /build/target/sirio-controller-1.0-SNAPSHOT.jar app.jar
 
 # Improve startup (Java 21) and footprint size
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Xmx768M"
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+	-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Xmx768M\
+	-Dcom.sun.management.jmxremote \
+	-Dcom.sun.management.jmxremote.port=9010 \
+	-Dcom.sun.management.jmxremote.rmi.port=9010 \
+	-Dcom.sun.management.jmxremote.local.only=false \
+	-Dcom.sun.management.jmxremote.authenticate=false \
+	-Dcom.sun.management.jmxremote.ssl=false \
+	-Djava.rmi.server.hostname=localhost \
+"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 	CMD ["bash", "-c", "jps >/dev/null 2>&1 || exit 1"]

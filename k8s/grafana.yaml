@@ -435,6 +435,7 @@ data:
               "y": 8
             },
             "id": 5,
+            "interval": "5",
             "options": {
               "legend": {
                 "calcs": [],
@@ -453,7 +454,7 @@ data:
               {
                 "disableTextWrap": false,
                 "editorMode": "builder",
-                "expr": "sum(rate(rabbitmq_global_messages_dead_lettered_maxlen_total[$__rate_interval])) / ((sum(rate(rabbitmq_global_messages_received_total[$__rate_interval]))) + 0.001)",
+                "expr": "sum(rate(rabbitmq_global_messages_dead_lettered_maxlen_total[$__interval])) / (sum(rate(rabbitmq_global_messages_received_total[$__interval])) + 0.001)",
                 "fullMetaSearch": false,
                 "includeNullMetadata": false,
                 "legendFormat": "Rejection Rate",
@@ -606,7 +607,7 @@ data:
           }
         ],
         "preload": false,
-        "refresh": "10s",
+        "refresh": "5s",
         "schemaVersion": 41,
         "tags": [
           "rabbitmq",

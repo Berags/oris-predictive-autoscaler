@@ -30,20 +30,20 @@ import io.kubernetes.client.openapi.models.V1Scale;
  */
 public class Controller {
 
-    private  volatile boolean running = true; //can be modified through different threads
-    private  final ObjectMapper objectMapper = new ObjectMapper();
-    private  KafkaConsumer<String, String> consumer;
-    private  GenericSpline spline;
-   /** private  APHArrivalProcess aphArrivalProcess;
-    private  ExponentialArrivalProcess expArrivalProcess; */ 
+    private volatile boolean running = true; //can be modified through different threads
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private KafkaConsumer<String, String> consumer;
+    private GenericSpline spline;
     private ArrivalProcess arrivalProcess;
-    private  Queue queue;
-    private  ServiceProcess serviceProcess;
-    private  BigDecimal rejectionTarget;
-    private  KafkaMessage message;
-    private  K8sScaler scaler;
+    private Queue queue;
+    private ServiceProcess serviceProcess;
+    private BigDecimal rejectionTarget;
+    private KafkaMessage message;
+    private K8sScaler scaler;
+    private boolean useBHP = false;
+    private int phases;
 
-    public  void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
+    public void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
 
         this.queue = q;
         this.serviceProcess = service;
@@ -90,7 +90,13 @@ public class Controller {
 
     }
 
-    public  void startConsuming() {
+    public void autoConfigBPH(Queue q, ServiceProcess service, BigDecimal rejection, int phases){
+        useBHP = true;
+        this.phases = phases;
+        autoConfig(q, service, rejection);
+    }
+
+    public void startConsuming() {
 
         // Add shutdown hook for graceful termination
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -142,7 +148,7 @@ public class Controller {
     }
 
     // Method to process the CDF message from Kafka queue
-    private  void processCDFMessageAndOptimizerPassing(String messageValue, Queue queue, ServiceProcess serviceProcess, BigDecimal Rejectiontarget) {
+    private void processCDFMessageAndOptimizerPassing(String messageValue, Queue queue, ServiceProcess serviceProcess, BigDecimal Rejectiontarget) {
         try {
             System.out.println("Processing CDF message...");
             System.out.println("Raw JSON: " + messageValue);
@@ -180,22 +186,18 @@ public class Controller {
             GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
             System.out.println(" GenericSpline built successfully");
 
-            System.out.println("Generating BPH arrival process...");
-
-            //aphArrivalProcess = ArrivalProcessFactory.generateBPH(spline, 5);
-            arrivalProcess = ArrivalProcessFactory.generateExponential(spline);
-
-            System.out.println("BPH arrival process generated successfully");
+            if(useBHP){
+                System.out.printf("Generating BPH arrival process with %d phases\n", phases);
+                arrivalProcess = ArrivalProcessFactory.generateBPH(spline, phases);
+            } else {
+                System.out.printf("Generating Exponential arrival process with %d phases\n", phases);
+                arrivalProcess = ArrivalProcessFactory.generateExponential(spline);
+            }
 
             System.out.println("🔍 Computing optimal replicas..."); 
-
-            /**int replicas = Optimizer.minReplicaExponential(aphArrivalProcess,
-            queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
-            */
-
             int replicas = Optimizer.minReplicaExponential(arrivalProcess,
             queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
-
+            
             scaler = K8sScaler.getInstance();
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
