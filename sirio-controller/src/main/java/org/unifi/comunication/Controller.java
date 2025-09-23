@@ -101,7 +101,8 @@ public class Controller {
         // === CONSUMPTION LOOP ===
         try {
             while (running) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+                int timeout = 10000;
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(timeout));
 
                 for (ConsumerRecord<String, String> record : records) {
                     System.out.println("\n===  NEW CDF MESSAGE ===");
@@ -115,6 +116,17 @@ public class Controller {
                     System.out.println("========================\n");
                 }
                 if (records.isEmpty()) {
+                    scaler = K8sScaler.getInstance();
+
+                    if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
+                        try {
+                            scaler.scaleWorkload(1);
+                            System.out.printf("No messages received for %ds, so prescribed 1 replica \n", timeout / 1000);
+                        } catch (Exception e) {
+                            System.err.println("Error while trying to scale: " + e.getMessage());
+                        }
+                    }
+
                     System.out.print(".");
                     System.out.flush();
                 }
@@ -183,9 +195,6 @@ public class Controller {
 
             int replicas = Optimizer.minReplicaExponential(arrivalProcess,
             queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
-            
-
-
 
             scaler = K8sScaler.getInstance();
 

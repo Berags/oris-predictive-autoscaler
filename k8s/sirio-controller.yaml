@@ -27,7 +27,7 @@ spec:
           value: "sirio-controller-group"
         resources:
           limits:
-            memory: "512Mi"
+            memory: "1024Mi"
             cpu: "500m"
           requests:
             memory: "256Mi"

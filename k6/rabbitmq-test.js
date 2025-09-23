@@ -85,7 +85,8 @@ queue.declare({
 
 export const genericProcess = () => {
 
-    const transitionTime = DistributionFactory.getDeterministic(10);
+    // const transitionTime = DistributionFactory.getExponential(20);
+    const transitionTime = DistributionFactory.getDeterministic(20);
     const stateDistributions = [];
     for (let i = 0; i < PARAM_ARRAY.length; i++) {
         stateDistributions.push(DistributionFactory.getFromType(DISTRIBUTION, PARAM_ARRAY[i]));
@@ -123,7 +124,7 @@ export const genericProcess = () => {
         const interArrivalTime = stateDistributions[currentState]();
         
         // Calculate precise scheduled time for this message
-        nextScheduledTime = postPublishTime + interArrivalTime * 1000; // Convert to milliseconds
+        nextScheduledTime +=  interArrivalTime * 1000; // Convert to milliseconds
         
         // Compensated waiting: account for publish overhead
         const now = Date.now();
@@ -196,12 +197,13 @@ export const genericProcess = () => {
         actualRateTrend.add(recentEffectiveRate);
         
         // Comprehensive verification every 500 messages
+        /*
         if (messageCount % 500 === 0) {
-            const verification = verifyLambda(intervals.slice(-500), lambda); // Use recent 500 samples
+            //const verification = verifyLambda(intervals.slice(-500), lambda); // Use recent 500 samples
             if (verification) {
                 console.log(`=== PRECISE RATE VERIFICATION (${messageCount} msgs) ===`);
-                console.log(`  TARGET OUTPUT RATE: ${lambda} msg/sec`);
-                console.log(`  Effective output rate: ${recentEffectiveRate.toFixed(4)} msg/sec (${((recentEffectiveRate/lambda)*100).toFixed(2)}% of target)`);
+                //console.log(`  TARGET OUTPUT RATE: ${lambda} msg/sec`);
+                //console.log(`  Effective output rate: ${recentEffectiveRate.toFixed(4)} msg/sec (${((recentEffectiveRate/lambda)*100).toFixed(2)}% of target)`);
                 console.log(`  Cumulative output rate: ${(messageCount/elapsed).toFixed(4)} msg/sec`);
                 //console.log(`  Theoretical λ from intervals: ${theoreticalRate.toFixed(4)} (${verification.isValid ? 'VALID' : 'INVALID'} Poisson)`);
                 console.log(`  Mean interval error: ${(verification.meanError * 100).toFixed(2)}%`);
