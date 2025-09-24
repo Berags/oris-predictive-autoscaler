@@ -14,6 +14,8 @@ COPY --from=builder /k6 /usr/bin/k6
 RUN mkdir -p /k6/lib
 COPY lib/ /k6/lib/
 COPY util/ /k6/util/
+COPY rabbitmq-test.js /k6/rabbitmq-test.js
+COPY DistributionFactory.js /k6/DistributionFactory.js
 
 WORKDIR /k6
 ENTRYPOINT ["k6"]
