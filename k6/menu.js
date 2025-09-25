@@ -47,21 +47,12 @@ const SCRIPT_DIR = process.env.SCRIPT_DIR || __dirname;
 
 
 const showMenu = () => {
-    console.log("---Distribution Test Menu---");
-    console.log("1. Binomial");
-    console.log("2. Beta");
-    console.log("3. Cauchy");
-    console.log("4. Chi-Squared ");
-    console.log("5. Exponential");
-    console.log("6. F");
-    console.log("7. Gamma");
-    console.log("8. Laplace");
-    console.log("9. Log-Normal ");
-    console.log("10. Negative-Binomial ");
-    console.log("11. Normal");
-    console.log("12. Poisson (λ<100)");
-    console.log("13. Uniform");
-    console.log("14. Exit");
+
+    console.log("1. Exponential");
+    console.log("2. Poisson (λ<100)");
+    console.log("3. Uniform (Use min = max for deterministic)");
+    console.log("4. Erlang (k, λ)");
+    console.log("5. Exit");
     console.log("----------------------------");
 
 }
@@ -133,6 +124,48 @@ const distributionHandlers = {
             });
         });
     },
+    'erlang': () => {
+        const distributionType = 'erlang';
+        console.log(`\nConfiguring ${distributionType} distribution test:`);
+        rl.question("Enter k (shape) value: ", (kInput) => {
+            let k = parseInt(kInput.trim());
+            if (isNaN(k) || k <= 0) {
+                console.log('Invalid k value. Using default: 2');
+                k = 2;
+            }
+            rl.question('Enter lambda values separated by commas (e.g., 3,5,10; one for each load state) [default: 3]: ', (input) => {
+                let lambdaArray;
+                if (input.trim() === '') {
+                    lambdaArray = [3];
+                } else {
+                    lambdaArray = input.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val) && val > 0);
+                    if (lambdaArray.length === 0) {
+                        console.log('Invalid lambda values. Using default: [3]');
+                        lambdaArray = [3];
+                    }
+                }
+                lambdaArray = lambdaArray.map(lambda => {
+                    if (lambda >= 100) {
+                        console.log(`Warning: λ=${lambda} >= 100 may cause performance issues. Using λ=99.`);
+                        return 99;
+                    }
+                    return lambda;
+                });
+                
+              
+                const erlangParams = lambdaArray.map(lambda => [k, lambda]);
+                
+                console.log(`Selected Erlang parameters: k=${k}, λ=[${lambdaArray.join(', ')}]`);
+                rl.question('Enter test duration [in seconds; default: 600]: ', (durationInput) => {
+                    let duration = parseInt(durationInput.trim()) || 600;
+                    console.log(`Test duration: ${duration} seconds`);
+                    
+                   
+                    runK6Test(distributionType, erlangParams, duration);
+                });
+            });
+        });
+    },
     'default': () => {
         console.log('This distribution is not implemented yet.');
         setTimeout(() => menu(), 1000);
@@ -151,20 +184,12 @@ const menu = () => {
 }
 
 const menuActions = {
-    '1': { name: 'Binomial', handler: () => getParameter('binomial') },
-    '2': { name: 'Beta', handler: () => getParameter('beta') },
-    '3': { name: 'Cauchy', handler: () => getParameter('cauchy') },
-    '4': { name: 'Chi-Squared', handler: () => getParameter('chi-squared') },
-    '5': { name: 'Exponential', handler: () => getParameter('exponential') },
-    '6': { name: 'F', handler: () => getParameter('f') },
-    '7': { name: 'Gamma', handler: () => getParameter('gamma') },
-    '8': { name: 'Laplace', handler: () => getParameter('laplace') },
-    '9': { name: 'Log-Normal', handler: () => getParameter('log-normal') },
-    '10': { name: 'Negative-Binomial', handler: () => getParameter('negative-binomial') },
-    '11': { name: 'Normal', handler: () => getParameter('normal') },
-    '12': { name: 'Poisson (λ<100)', handler: () => getParameter('poisson') },
-    '13': { name: 'Uniform', handler: () => getParameter('uniform') },
-    '14': { name: 'Exit', handler: () => {
+    
+    '1': { name: 'Exponential', handler: () => getParameter('exponential') },
+    '2': { name: 'Poisson (λ<100)', handler: () => getParameter('poisson') },
+    '3': { name: 'Uniform (Use min = max for deterministic)', handler: () => getParameter('uniform') },
+    '4': { name: 'Erlang', handler: () => getParameter('erlang') },
+    '5': { name: 'Exit', handler: () => {
         console.log('Exiting program. Goodbye!');
         rl.close();
     }}
@@ -188,9 +213,15 @@ const handleChoice = (choice) => {
 const runK6Test = (distributionType, paramArray = [3], duration = 600) => {
     console.log(`\n Starting k6 RabbitMQ test with ${distributionType} distribution...`);
     
-    if (Array.isArray(paramArray[0])) {
+    
+    if (distributionType === 'erlang') {
+        //  Erlang: paramArray = [[k1, λ1], [k2, λ2], ...]
+        console.log(` Parameters: Erlang pairs=[${paramArray.map(pair => `[k=${pair[0]}, λ=${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
+    } else if (Array.isArray(paramArray[0])) {
+        // Uniform: paramArray = [[min1, max1], [min2, max2], ...]
         console.log(` Parameters: ranges=[${paramArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
     } else {
+        // Per Poisson/Exponential: paramArray = [λ1, λ2, ...]
         console.log(` Parameters: λ=[${paramArray.join(', ')}], duration=${duration} seconds`);
     }
     

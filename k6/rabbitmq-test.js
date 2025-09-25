@@ -18,7 +18,7 @@ class DistributionFactory {
         "exponential": (params) => this.getExponential(params[0]),
         "poisson": (params) => this.getExponential(params[0]),
         "uniform": (params) => this.getUniform(...params[0]),
-        "deterministic": (params) => this.getDeterministic(params[0]),
+        "erlang": (params) => this.getErlang(...params[0]),
     };
 
     static getFromType(type, ...params) {
@@ -39,6 +39,16 @@ class DistributionFactory {
 
     static getExponential(lambda) {
         return () => probabilityDistributions.rexp(1, lambda);
+    }
+    static getErlang(k, lambda) {
+
+        return () => {                           
+        let sum = 0;
+        for(let i = 0; i < k; i++) {
+            sum += probabilityDistributions.rexp(1, lambda)[0]; 
+        }
+        return sum;
+    };
     }
 }
 
