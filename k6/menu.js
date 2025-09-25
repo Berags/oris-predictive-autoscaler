@@ -217,10 +217,10 @@ const runK6Test = (distributionType, paramArray = [3], duration = 600) => {
     if (distributionType === 'erlang') {
         //  Erlang: paramArray = [[k1, λ1], [k2, λ2], ...]
         console.log(` Parameters: Erlang pairs=[${paramArray.map(pair => `[k=${pair[0]}, λ=${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
-    } else if (Array.isArray(paramArray[0])) {
+    } else if (distributionType === 'uniform')  {
         // Uniform: paramArray = [[min1, max1], [min2, max2], ...]
         console.log(` Parameters: ranges=[${paramArray.map(pair => `[${pair[0]}, ${pair[1]}]`).join(', ')}], duration=${duration} seconds`);
-    } else {
+    } else if (distributionType === 'poisson' || distributionType === 'exponential') {
         // Per Poisson/Exponential: paramArray = [λ1, λ2, ...]
         console.log(` Parameters: λ=[${paramArray.join(', ')}], duration=${duration} seconds`);
     }
