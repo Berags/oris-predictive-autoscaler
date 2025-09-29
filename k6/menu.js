@@ -100,7 +100,7 @@ const distributionHandlers = {
                     const values = couple.split(',').map(val => parseFloat(val.trim())).filter(val => !isNaN(val));
                     if (values.length === 2) {
                         const [min, max] = values;
-                        if (min < max) {
+                        if (min < max || min === max) {
                             return [min, max];
                         } else {
                             console.log(`Warning: Invalid range [${min}, ${max}]. Min should be < Max. Using [${Math.min(min, max)}, ${Math.max(min, max)}]`);
@@ -185,7 +185,7 @@ const menu = () => {
 
 const menuActions = {
     
-    '1': { name: 'Exponential', handler: () => getParameter('exponential') },
+   // '1': { name: 'Exponential', handler: () => getParameter('exponential') },
     '2': { name: 'Poisson (λ<100)', handler: () => getParameter('poisson') },
     '3': { name: 'Uniform (Use min = max for deterministic)', handler: () => getParameter('uniform') },
     '4': { name: 'Erlang', handler: () => getParameter('erlang') },

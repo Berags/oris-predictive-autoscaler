@@ -30,6 +30,7 @@ class DistributionFactory {
     }
 
     static getUniform(min, max) {
+        console.log(`Uniform distribution between ${min} and ${max}`);
         return () => probabilityDistributions.runif(1, min, max);
     }
 
@@ -96,7 +97,7 @@ queue.declare({
 export const genericProcess = () => {
 
     // const transitionTime = DistributionFactory.getExponential(20);
-    const transitionTime = DistributionFactory.getDeterministic(20);
+    const transitionTime = DistributionFactory.getDeterministic(60);
     const stateDistributions = [];
     for (let i = 0; i < PARAM_ARRAY.length; i++) {
         stateDistributions.push(DistributionFactory.getFromType(DISTRIBUTION, PARAM_ARRAY[i]));
