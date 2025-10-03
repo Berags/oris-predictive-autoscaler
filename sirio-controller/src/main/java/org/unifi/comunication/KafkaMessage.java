@@ -3,6 +3,7 @@ package org.unifi.comunication;
 import java.util.List;
 
 public class KafkaMessage {
+
     public long timestamp;
     public String queue_name;
     public int total_samples;
@@ -11,4 +12,3 @@ public class KafkaMessage {
     public List<Double> cdf_y;
     public float mean;
 }
-    

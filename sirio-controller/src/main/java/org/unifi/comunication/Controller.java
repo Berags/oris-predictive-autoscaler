@@ -1,6 +1,7 @@
 package org.unifi.comunication;
 
 // Required imports for Kafka
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -14,19 +15,24 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.unifi.api.K8sScaler;
-import org.unifi.model.*;
+import org.unifi.model.ArrivalProcess;
+import org.unifi.model.ArrivalProcessFactory;
+import org.unifi.model.GenericSpline;
+import org.unifi.model.Optimizer;
+import org.unifi.model.Queue;
+import org.unifi.model.ServiceProcess;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Scale;
 
-
-
 /**
- * It consumer messages from a Kafka topic containing CDF data, processes them to create an arrival process and communicates
- * with the optimizer to compute the optimal number of replicas needed to meet a specified rejection target and with K8sScaler to scale the deployment.
- * 
+ * It consumer messages from a Kafka topic containing CDF data, processes them
+ * to create an arrival process and communicates with the optimizer to compute
+ * the optimal number of replicas needed to meet a specified rejection target
+ * and with K8sScaler to scale the deployment.
+ *
  */
 public class Controller {
 
@@ -90,7 +96,7 @@ public class Controller {
 
     }
 
-    public void autoConfigBPH(Queue q, ServiceProcess service, BigDecimal rejection, int phases){
+    public void autoConfigBPH(Queue q, ServiceProcess service, BigDecimal rejection, int phases) {
         useBHP = true;
         this.phases = phases;
         autoConfig(q, service, rejection);
@@ -178,15 +184,16 @@ public class Controller {
             System.out.println("  CDF values count: " + cdfValues.size());
 
             System.out.println(" CDF message processed successfully!");
-            
+
             //passing of consumed data 
             System.out.println(" Starting mathematical computation...");
-             
-            System.out.println(" Building GenericSpline..."); spline =
-            GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
+
+            System.out.println(" Building GenericSpline...");
+            spline
+                    = GenericSpline.builder().CDF(cdfX, cdfY).mean(mean).build();
             System.out.println(" GenericSpline built successfully");
 
-            if(useBHP){
+            if (useBHP) {
                 System.out.printf("Generating BPH arrival process with %d phases\n", phases);
                 arrivalProcess = ArrivalProcessFactory.generateBPH(spline, phases);
             } else {
@@ -194,10 +201,11 @@ public class Controller {
                 arrivalProcess = ArrivalProcessFactory.generateExponential(spline);
             }
 
-            System.out.println("🔍 Computing optimal replicas..."); 
+            System.out.println("🔍 Computing optimal replicas...");
             int replicas = Optimizer.minReplicaExponential(arrivalProcess,
-            queue, serviceProcess, Rejectiontarget); System.out.println("Optimal replicas computed: " + replicas);
-            
+                    queue, serviceProcess, Rejectiontarget);
+            System.out.println("Optimal replicas computed: " + replicas);
+
             scaler = K8sScaler.getInstance();
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
@@ -217,12 +225,12 @@ public class Controller {
                         }
                     }
 
-                } catch (Exception e) {
+                } catch (ApiException | InterruptedException e) {
                     System.err.println("Error while trying to scale: " + e.getMessage());
                 }
             }
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println(" Error processing CDF message: " + e.getMessage());
             System.err.println("Raw message was: " + messageValue);
         }
