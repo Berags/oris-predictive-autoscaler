@@ -1,68 +1,69 @@
 package org.unifi.model;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
-public class GenericSpline implements Distribution{
-
+public class GenericSpline implements Distribution {
 
     private List<Double> xCDF;
     private List<Double> yCDF;
     private List<Double> xPDF;
     private List<Double> yPDF;
     private double mean;
-    private double epsilon = 0.000001;
     
-    public static GenericSplineBuilder builder(){
+    @Deprecated
+    private double epsilon = 0.000001;
+
+    public static GenericSplineBuilder builder() {
         return new GenericSplineBuilder();
     }
 
-    void setCDF(List<Double> x, List<Double> y){
-        if(x.size() != y.size()){
+    void setCDF(List<Double> x, List<Double> y) throws IllegalArgumentException {
+        if (x.size() != y.size()) {
             throw new IllegalArgumentException("The two lists doesn't have the same size");
         }
         double previous = 0;
-        for(double point: y){
-            if(point < previous){
+        for (double point : y) {
+            if (point < previous) {
                 throw new IllegalArgumentException("The given points ar not increasing");
             }
-            if(point > 1){
+            if (point > 1) {
                 throw new IllegalArgumentException("A CDF cannot be greather than 1");
             }
             previous = point;
         }
 
-        this.xCDF = new ArrayList(x);
-        this.yCDF = new ArrayList(y);
+        this.xCDF = new ArrayList<>(x);
+        this.yCDF = new ArrayList<>(y);
     }
 
-    void setPDF(List<Double> x, List<Double> y){
-        if(x.size() != y.size()){
+    void setPDF(List<Double> x, List<Double> y) throws IllegalArgumentException {
+        if (x.size() != y.size()) {
             throw new IllegalArgumentException("The two lists doesn't have the same size");
         }
         double previous = 0;
-        for(double point: y){
-            if(point < previous){
+        for (double point : y) {
+            if (point < previous) {
                 throw new IllegalArgumentException("The given points ar not increasing");
             }
             previous = point;
         }
 
-        this.xPDF = new ArrayList(x);
-        this.yPDF = new ArrayList(y);
+        this.xPDF = new ArrayList<>(x);
+        this.yPDF = new ArrayList<>(y);
     }
 
-    void setMean(double mean){
+    void setMean(double mean) {
         this.mean = mean;
     }
 
     @Override
-    public double getCDFValue(double point){
-        if(point < xCDF.get(0)){
+    public double getCDFValue(double point) {
+        if (point < xCDF.get(0)) {
             return 0;
         }
-        for(int i = 1; i < xCDF.size(); i++){
-            if(point < xCDF.get(i)){
+        for (int i = 1; i < xCDF.size(); i++) {
+            if (point < xCDF.get(i)) {
                 return yCDF.get(i - 1) + (yCDF.get(i) - yCDF.get(i - 1)) / (xCDF.get(i) - xCDF.get(i - 1)) * (point - xCDF.get(i - 1));
             }
         }
@@ -70,17 +71,17 @@ public class GenericSpline implements Distribution{
     }
 
     @Override
-    public double getMean(){
-        return mean; 
+    public double getMean() {
+        return mean;
     }
-    
+
     @Override
-    public double getPDFValue(double point){
-        if(point < xPDF.get(0)){
+    public double getPDFValue(double point) {
+        if (point < xPDF.get(0)) {
             return 0;
         }
-        for(int i = 1; i < xPDF.size(); i++){
-            if(point < xPDF.get(i)){
+        for (int i = 1; i < xPDF.size(); i++) {
+            if (point < xPDF.get(i)) {
                 return yPDF.get(i - 1) + (yPDF.get(i) - yPDF.get(i - 1)) / (xPDF.get(i) - xPDF.get(i - 1)) * (point - xPDF.get(i - 1));
             }
         }

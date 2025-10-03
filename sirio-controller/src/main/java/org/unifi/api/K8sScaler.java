@@ -78,16 +78,16 @@ public class K8sScaler {
         System.out.println("  Kind: " + this.kind);
         System.out.println("  Current replicas: " + this.replicas);
         System.out.println("  Target replicas: " + replicas);
-        
+
         this.replicas = replicas;
         V1Scale scaleBody = new V1Scale();
-        
+
         // Create and set the metadata (required for proper API request)
         io.kubernetes.client.openapi.models.V1ObjectMeta metadata = new io.kubernetes.client.openapi.models.V1ObjectMeta();
         metadata.setName(this.scaleName);
         metadata.setNamespace(this.namespace);
         scaleBody.setMetadata(metadata);
-        
+
         // Create and set the spec properly
         V1ScaleSpec spec = new V1ScaleSpec();
         spec.setReplicas(this.replicas);
@@ -147,7 +147,8 @@ public class K8sScaler {
             case "replicaset" -> {
                 return appsApi.readNamespacedReplicaSetScale(scaleName, namespace).execute();
             }
-            default -> throw new IllegalArgumentException("Kind not supported: " + kind);
+            default ->
+                throw new IllegalArgumentException("Kind not supported: " + kind);
         }
     }
 
@@ -160,7 +161,7 @@ public class K8sScaler {
                 if (current == this.replicas) {
                     return true;
                 }
-            }catch(Exception e) {
+            } catch (ApiException e) {
                 // ApiException may occur if the Kubernetes API server is temporarily unavailable,
                 // or if there are transient network issues. These are expected during scaling operations,
                 // and it is safe to retry in these cases. Permanent errors (e.g., 404 Not Found, 403 Forbidden)
