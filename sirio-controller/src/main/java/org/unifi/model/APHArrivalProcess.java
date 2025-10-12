@@ -1,39 +1,40 @@
 package org.unifi.model;
 
-import org.oristool.petrinet.PetriNet;
-import org.oristool.petrinet.Marking;
-import org.oristool.petrinet.Place;
-import org.oristool.petrinet.Transition;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.oristool.models.stpn.MarkingExpr;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
-import java.util.List;
-import java.util.ArrayList;
-import java.math.BigDecimal;
+import org.oristool.petrinet.Marking;
+import org.oristool.petrinet.PetriNet;
+import org.oristool.petrinet.Place;
+import org.oristool.petrinet.Transition;
 
-public class APHArrivalProcess implements ArrivalProcess{
+public class APHArrivalProcess implements ArrivalProcess {
 
-    private List<BigDecimal> arrivalWeights;
-    private int length;
+    private final List<BigDecimal> arrivalWeights;
+    private final int length;
     private String prefix = "a";
 
-    public APHArrivalProcess(List<BigDecimal> arrivalWeights){
-        this.arrivalWeights = new ArrayList<BigDecimal>(arrivalWeights);
+    public APHArrivalProcess(List<BigDecimal> arrivalWeights) {
+        this.arrivalWeights = new ArrayList<>(arrivalWeights);
         length = this.arrivalWeights.size();
     }
 
-    public void setPrefix(String prefix){
+    public void setPrefix(String prefix) {
         this.prefix = prefix;
     }
 
     @Override
-    public Transition generateModel(PetriNet pn, Marking m){
+    public Transition generateModel(PetriNet pn, Marking m) {
         Place ready = pn.addPlace(prefix + "ready");
         Transition previousTransition = null;
-        for(int i = 1; i <= length; i++){
+        for (int i = 1; i <= length; i++) {
 
             Place placeIter = pn.addPlace(prefix + "place" + i);
             Transition exponentialIter = pn.addTransition(prefix + i);
-            
+
             pn.addPrecondition(placeIter, exponentialIter);
             exponentialIter.addFeature(StochasticTransitionFeature.newExponentialInstance(BigDecimal.valueOf(i)));
 
@@ -42,7 +43,7 @@ public class APHArrivalProcess implements ArrivalProcess{
             pn.addPostcondition(immediateIter, placeIter);
             immediateIter.addFeature(StochasticTransitionFeature.newDeterministicInstance(BigDecimal.ZERO, MarkingExpr.of(arrivalWeights.get(i - 1).doubleValue())));
 
-            if(previousTransition != null){
+            if (previousTransition != null) {
                 pn.addPostcondition(previousTransition, placeIter);
             }
             previousTransition = exponentialIter;
@@ -52,5 +53,4 @@ public class APHArrivalProcess implements ArrivalProcess{
         m.addTokens(ready, 1);
         return previousTransition;
     }
-
 }

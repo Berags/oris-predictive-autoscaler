@@ -1,7 +1,7 @@
 // Pure utility to verify inter-arrival intervals against an expected lambda
 // Designed to be runnable in both k6 (ES module) and Node.js (CommonJS via transpilation not required here)
 
-export default function verifyLambda(intervals, expectedLambda, opts = {}) {
+const verifyLambda = (intervals, expectedLambda, opts = {}) => {
   if (!Array.isArray(intervals)) throw new Error('intervals must be an array');
   if (typeof expectedLambda !== 'number' || !isFinite(expectedLambda) || expectedLambda <= 0) {
     throw new Error('expectedLambda must be a positive number');
@@ -33,3 +33,5 @@ export default function verifyLambda(intervals, expectedLambda, opts = {}) {
     isValid: meanError < meanTolerance && varianceError < varianceTolerance,
   };
 }
+
+export default verifyLambda;

@@ -1,28 +1,26 @@
 package org.unifi.model;
 
-import org.oristool.petrinet.Place;
-import org.oristool.petrinet.PetriNet;
-import org.oristool.petrinet.Transition;
-import org.oristool.petrinet.Marking;
-import org.oristool.petrinet.EnablingFunction;
 import org.oristool.models.stpn.trees.StochasticTransitionFeature;
+import org.oristool.petrinet.EnablingFunction;
+import org.oristool.petrinet.Marking;
+import org.oristool.petrinet.PetriNet;
+import org.oristool.petrinet.Place;
+import org.oristool.petrinet.Transition;
 
-public class Queue{
+public class Queue {
 
     private int size = 0;
 
-    public Queue(){}
-
-    public Queue(int size){
-        if (size < 0){
+    public Queue(int size) {
+        if (size < 0) {
             throw new IllegalArgumentException("A queue with negative size cannot exist");
         }
         this.size = size;
     }
 
-    public Place generateModel(PetriNet pn, Marking m){
+    public Place generateModel(PetriNet pn, Marking m) {
         Place queue = pn.addPlace("queue");
-        if(size > 0){
+        if (size > 0) {
             Transition rejection = pn.addTransition("rejection");
             pn.addPrecondition(queue, rejection);
             rejection.addFeature(StochasticTransitionFeature.newDeterministicInstance("0"));
@@ -31,7 +29,7 @@ public class Queue{
         return queue;
     }
 
-    public int getSize(){
+    public int getSize() {
         return size;
     }
 }
