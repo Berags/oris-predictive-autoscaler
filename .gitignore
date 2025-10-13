@@ -8,3 +8,6 @@ sirio-controller/sirio-controller.iws
 k6/lib
 
 .fuse_hidden*
+
+Experiments/.ipynb_checkpoints
+Experiments/.virtual_documents

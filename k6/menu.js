@@ -224,7 +224,7 @@ const menu = () => {
 };
 
 const menuActions = {
-  // '1': { name: 'Exponential', handler: () => getParameter('exponential') },
+  1: { name: 'Exponential', handler: () => getParameter('poisson') },
   2: { name: "Poisson (λ<100)", handler: () => getParameter("poisson") },
   3: {
     name: "Uniform (Use min = max for deterministic)",
