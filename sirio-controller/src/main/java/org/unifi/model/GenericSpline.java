@@ -10,9 +10,6 @@ public class GenericSpline implements Distribution {
     private List<Double> xPDF;
     private List<Double> yPDF;
     private double mean;
-    
-    @Deprecated
-    private double epsilon = 0.000001;
 
     public static GenericSplineBuilder builder() {
         return new GenericSplineBuilder();
@@ -28,7 +25,7 @@ public class GenericSpline implements Distribution {
                 throw new IllegalArgumentException("The given points ar not increasing");
             }
             if (point > 1) {
-                throw new IllegalArgumentException("A CDF cannot be greather than 1");
+                throw new IllegalArgumentException("A CDF cannot be greater than 1");
             }
             previous = point;
         }

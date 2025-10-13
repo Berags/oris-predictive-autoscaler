@@ -48,6 +48,7 @@ public class Controller {
     private K8sScaler scaler;
     private boolean useBHP = false;
     private int phases;
+    private int timeout = 10000;
 
     public void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
 
@@ -113,8 +114,7 @@ public class Controller {
         // === CONSUMPTION LOOP ===
         try {
             while (running) {
-                int timeout = 10000;
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(timeout));
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(this.timeout));
 
                 for (ConsumerRecord<String, String> record : records) {
                     System.out.println("\n===  NEW CDF MESSAGE ===");
@@ -234,5 +234,12 @@ public class Controller {
             System.err.println(" Error processing CDF message: " + e.getMessage());
             System.err.println("Raw message was: " + messageValue);
         }
+    }
+
+    public void setTimeout(int timeout){
+        if(timeout < 0){
+            timeout = 0;
+        }
+        this.timeout = timeout;
     }
 }

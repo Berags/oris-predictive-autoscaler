@@ -501,6 +501,7 @@ data:
               "y": 8
             },
             "id": 6,
+            "interval": "5s",
             "options": {
               "colorMode": "value",
               "graphMode": "none",
@@ -570,6 +571,7 @@ data:
               "y": 8
             },
             "id": 8,
+            "interval": "5s",
             "options": {
               "colorMode": "value",
               "graphMode": "none",
@@ -636,6 +638,7 @@ data:
               "y": 8
             },
             "id": 7,
+            "interval": "5s",
             "options": {
               "colorMode": "value",
               "graphMode": "none",

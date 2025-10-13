@@ -15,6 +15,7 @@ public class App {
         Controller kafkaConsumer = new Controller();
 
         kafkaConsumer.autoConfig(queue, serviceProcess, new BigDecimal("0.05"));
+        kafkaConsumer.setTimeout(5000);
         kafkaConsumer.startConsuming();
     }
 }
