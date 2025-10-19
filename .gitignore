@@ -11,3 +11,5 @@ k6/lib
 
 Experiments/.ipynb_checkpoints
 Experiments/.virtual_documents
+
+.venv/

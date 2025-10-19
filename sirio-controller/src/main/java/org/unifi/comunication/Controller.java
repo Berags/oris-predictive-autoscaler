@@ -48,7 +48,9 @@ public class Controller {
     private K8sScaler scaler;
     private boolean useBHP = false;
     private int phases;
-    private int timeout = 10000;
+    private int timeout = 1_000;
+    private final List<Integer> replicaHistory = new ArrayList<>();
+    private int scalingDecisionWindow = 5; // Number of iterations to consider for scaling
 
     public void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
 
@@ -124,7 +126,6 @@ public class Controller {
                     System.out.println("Timestamp: " + record.timestamp());
                     System.out.println("Key: " + record.key());
                     processCDFMessageAndOptimizerPassing(record.value(), queue, serviceProcess, rejectionTarget);
-
                     System.out.println("========================\n");
                 }
                 if (records.isEmpty()) {
@@ -132,8 +133,20 @@ public class Controller {
 
                     if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
                         try {
-                            scaler.scaleWorkload(1);
-                            System.out.printf("No messages received for %ds, so prescribed 1 replica \n", timeout / 1000);
+                            replicaHistory.add(1);
+                            if (replicaHistory.size() > scalingDecisionWindow) {
+                                replicaHistory.remove(0);
+                            }
+                            System.out.println("Replica recommendation history for scale-down: " + replicaHistory);
+
+                            if (replicaHistory.size() == scalingDecisionWindow && replicaHistory.stream().allMatch(r -> r == 1)) {
+                                System.out.println("Scaling down condition met. Required replicas " + 1 + " has been consistent for the last " + scalingDecisionWindow + " iterations.");
+                                scaler.scaleWorkload(1);
+                                System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+                                replicaHistory.clear(); // Clear history after scaling
+                            } else {
+                                System.out.println("Waiting for stable replica recommendations before scaling down. Current window size: " + replicaHistory.size() + "/" + scalingDecisionWindow);
+                            }
                         } catch (Exception e) {
                             System.err.println("Error while trying to scale: " + e.getMessage());
                         }
@@ -202,34 +215,47 @@ public class Controller {
             }
 
             System.out.println("🔍 Computing optimal replicas...");
-            int replicas = Optimizer.minReplicaExponential(arrivalProcess,
+            int newReplicas = Optimizer.minReplicaExponential(arrivalProcess,
                     queue, serviceProcess, Rejectiontarget);
-            System.out.println("Optimal replicas computed: " + replicas);
+            System.out.println("Optimal replicas computed: " + newReplicas);
 
             scaler = K8sScaler.getInstance();
 
             if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
                 try {
-                    scaler.scaleWorkload(replicas);
-                    System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+                    V1Scale scale = scaler.readScale();
+                    int currentReplicas = scale.getStatus().getReplicas();
+                    System.out.println("Current replicas: " + currentReplicas);
 
-                    boolean ok = scaler.waitForReplicas(60, 2);
-                    if (ok) {
-                        System.out.println("Replica target achieved.");
-                    } else {
-                        try {
-                            V1Scale scale = scaler.readScale();
-                            System.out.println("Timeout: current replicas = " + scale.getStatus().getReplicas() + ", target = " + scaler.getReplicas());
-                        } catch (ApiException e) {
-                            System.err.println("Failed to read scale after timeout: " + e.getResponseBody());
+                    if (newReplicas > currentReplicas) {
+                        // Scale up immediately
+                        System.out.println("Scaling up from " + currentReplicas + " to " + newReplicas);
+                        scaler.scaleWorkload(newReplicas);
+                        System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+                        replicaHistory.clear(); // Clear history after scaling
+                    } else if (newReplicas < currentReplicas) {
+                        // Scale down lazily
+                        replicaHistory.add(newReplicas);
+                        if (replicaHistory.size() > scalingDecisionWindow) {
+                            replicaHistory.remove(0);
                         }
-                    }
+                        System.out.println("Replica recommendation history for scale-down: " + replicaHistory);
 
-                } catch (ApiException | InterruptedException e) {
-                    System.err.println("Error while trying to scale: " + e.getMessage());
+                        if (replicaHistory.size() == scalingDecisionWindow && replicaHistory.stream().allMatch(r -> r <= newReplicas)) {
+                            System.out.println("Scaling down condition met. Required replicas " + newReplicas + " has been consistent for the last " + scalingDecisionWindow + " iterations.");
+                            scaler.scaleWorkload(newReplicas);
+                            System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+                            replicaHistory.clear(); // Clear history after scaling
+                        } else {
+                            System.out.println("Waiting for stable replica recommendations before scaling down. Current window size: " + replicaHistory.size() + "/" + scalingDecisionWindow);
+                        }
+                    } else {
+                        System.out.println("No scaling needed. Current replicas: " + currentReplicas + ", recommended: " + newReplicas);
+                    }
+                } catch (ApiException e) {
+                    System.err.println("Error while reading scale or scaling: " + e.getResponseBody());
                 }
             }
-
         } catch (IOException e) {
             System.err.println(" Error processing CDF message: " + e.getMessage());
             System.err.println("Raw message was: " + messageValue);
