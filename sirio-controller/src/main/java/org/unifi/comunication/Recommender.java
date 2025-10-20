@@ -14,6 +14,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.unifi.api.AbstractUpdater;
+import org.unifi.api.ImmediateUpdater;
 import org.unifi.api.K8sScaler;
 import org.unifi.model.ArrivalProcess;
 import org.unifi.model.ArrivalProcessFactory;
@@ -25,7 +27,6 @@ import org.unifi.model.ServiceProcess;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.kubernetes.client.openapi.ApiException;
-import io.kubernetes.client.openapi.models.V1Scale;
 
 /**
  * It consumer messages from a Kafka topic containing CDF data, processes them
@@ -34,7 +35,7 @@ import io.kubernetes.client.openapi.models.V1Scale;
  * and with K8sScaler to scale the deployment.
  *
  */
-public class Controller {
+public class Recommender {
 
     private volatile boolean running = true; //can be modified through different threads
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -45,12 +46,14 @@ public class Controller {
     private ServiceProcess serviceProcess;
     private BigDecimal rejectionTarget;
     private KafkaMessage message;
-    private K8sScaler scaler;
+    private AbstractUpdater updater;
     private boolean useBHP = false;
     private int phases;
     private int timeout = 1_000;
-    private final List<Integer> replicaHistory = new ArrayList<>();
-    private int scalingDecisionWindow = 5; // Number of iterations to consider for scaling
+
+    public Recommender() throws IOException{
+        updater = new ImmediateUpdater();
+    }
 
     public void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
 
@@ -129,27 +132,10 @@ public class Controller {
                     System.out.println("========================\n");
                 }
                 if (records.isEmpty()) {
-                    scaler = K8sScaler.getInstance();
-
-                    if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
-                        try {
-                            replicaHistory.add(1);
-                            if (replicaHistory.size() > scalingDecisionWindow) {
-                                replicaHistory.remove(0);
-                            }
-                            System.out.println("Replica recommendation history for scale-down: " + replicaHistory);
-
-                            if (replicaHistory.size() == scalingDecisionWindow && replicaHistory.stream().allMatch(r -> r == 1)) {
-                                System.out.println("Scaling down condition met. Required replicas " + 1 + " has been consistent for the last " + scalingDecisionWindow + " iterations.");
-                                scaler.scaleWorkload(1);
-                                System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
-                                replicaHistory.clear(); // Clear history after scaling
-                            } else {
-                                System.out.println("Waiting for stable replica recommendations before scaling down. Current window size: " + replicaHistory.size() + "/" + scalingDecisionWindow);
-                            }
-                        } catch (Exception e) {
-                            System.err.println("Error while trying to scale: " + e.getMessage());
-                        }
+                    try {
+                        updater.scaleWorkload(1);
+                    } catch (Exception e) {
+                        System.err.println("Error while trying to scale: " + e.getMessage());
                     }
 
                     System.out.print(".");
@@ -164,6 +150,10 @@ public class Controller {
             consumer.close();
         }
 
+    }
+
+    public void setStrategy(AbstractUpdater updater){
+        this.updater = updater;
     }
 
     // Method to process the CDF message from Kafka queue
@@ -219,42 +209,14 @@ public class Controller {
                     queue, serviceProcess, Rejectiontarget);
             System.out.println("Optimal replicas computed: " + newReplicas);
 
-            scaler = K8sScaler.getInstance();
-
-            if (scaler.getScaleName() != null && !scaler.getScaleName().isEmpty()) {
-                try {
-                    V1Scale scale = scaler.readScale();
-                    int currentReplicas = scale.getStatus().getReplicas();
-                    System.out.println("Current replicas: " + currentReplicas);
-
-                    if (newReplicas > currentReplicas) {
-                        // Scale up immediately
-                        System.out.println("Scaling up from " + currentReplicas + " to " + newReplicas);
-                        scaler.scaleWorkload(newReplicas);
-                        System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
-                        replicaHistory.clear(); // Clear history after scaling
-                    } else if (newReplicas < currentReplicas) {
-                        // Scale down lazily
-                        replicaHistory.add(newReplicas);
-                        if (replicaHistory.size() > scalingDecisionWindow) {
-                            replicaHistory.remove(0);
-                        }
-                        System.out.println("Replica recommendation history for scale-down: " + replicaHistory);
-
-                        if (replicaHistory.size() == scalingDecisionWindow && replicaHistory.stream().allMatch(r -> r <= newReplicas)) {
-                            System.out.println("Scaling down condition met. Required replicas " + newReplicas + " has been consistent for the last " + scalingDecisionWindow + " iterations.");
-                            scaler.scaleWorkload(newReplicas);
-                            System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
-                            replicaHistory.clear(); // Clear history after scaling
-                        } else {
-                            System.out.println("Waiting for stable replica recommendations before scaling down. Current window size: " + replicaHistory.size() + "/" + scalingDecisionWindow);
-                        }
-                    } else {
-                        System.out.println("No scaling needed. Current replicas: " + currentReplicas + ", recommended: " + newReplicas);
-                    }
-                } catch (ApiException e) {
-                    System.err.println("Error while reading scale or scaling: " + e.getResponseBody());
-                }
+            try {
+                K8sScaler scaler = K8sScaler.getInstance();
+                System.out.println("Current replicas: " + scaler.getReplicas());
+                System.out.println("Model Suggested replicas: " + newReplicas);
+                int recommended = updater.scaleWorkload(newReplicas);
+                System.out.println("Recommended replicas: " + recommended);
+            } catch (ApiException e) {
+                System.err.println("Error while reading scale or scaling: " + e.getResponseBody());
             }
         } catch (IOException e) {
             System.err.println(" Error processing CDF message: " + e.getMessage());
@@ -263,9 +225,6 @@ public class Controller {
     }
 
     public void setTimeout(int timeout){
-        if(timeout < 0){
-            timeout = 0;
-        }
-        this.timeout = timeout;
+        this.timeout = Math.max(timeout, 0);
     }
 }
