@@ -16,6 +16,7 @@ class DistributionFactory {
     poisson: (params) => this.getExponential(params[0]),
     uniform: (params) => this.getUniform(...params[0]),
     erlang: (params) => this.getErlang(...params[0]),
+    hypererlang: (params) => this.getHyperErlang(...params[0])
   };
 
   static getFromType(type, ...params) {
@@ -47,6 +48,32 @@ class DistributionFactory {
       return sum;
     };
   }
+  static getHyperErlang(phases, weights) {
+    
+    const weightSum = weights.reduce((sum, w) => sum + w, 0);
+    if (Math.abs(weightSum - 1.0) > 0.001) {
+        console.warn(`Warning: weights sum to ${weightSum}, normalizing to 1.0`);
+        weights = weights.map(w => w / weightSum);
+    }
+    
+    const erlangGenerators = phases.map(([k, lambda]) => this.getErlang(k, lambda));
+    
+    return () => {
+        
+        const rand = Math.random();
+        let cumulativeWeight = 0;
+        
+        for (let i = 0; i < phases.length; i++) {
+            cumulativeWeight += weights[i];
+            if (rand <= cumulativeWeight) {
+                return erlangGenerators[i]();
+            }
+        }
+        
+        // Fallback 
+        return erlangGenerators[erlangGenerators.length - 1]();
+    };
+}
 }
 
 const RABBITMQ_HOST = __ENV.RABBITMQ_HOST || "localhost";
