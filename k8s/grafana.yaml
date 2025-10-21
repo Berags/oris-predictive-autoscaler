@@ -475,7 +475,40 @@ data:
             "fieldConfig": {
               "defaults": {
                 "color": {
-                  "mode": "thresholds"
+                  "mode": "palette-classic"
+                },
+                "custom": {
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "insertNulls": false,
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
                 },
                 "mappings": [],
                 "thresholds": {
@@ -492,7 +525,23 @@ data:
                   ]
                 }
               },
-              "overrides": []
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "sum(kube_deployment_status_replicas_available{deployment=\"python-service\"})"
+                  },
+                  "properties": [
+                    {
+                      "id": "color",
+                      "value": {
+                        "fixedColor": "#73BF69",
+                        "mode": "fixed"
+                      }
+                    }
+                  ]
+                }
+              ]
             },
             "gridPos": {
               "h": 8,
@@ -503,21 +552,17 @@ data:
             "id": 6,
             "interval": "5s",
             "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "percentChangeColorMode": "standard",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
+              "legend": {
+                "calcs": [],
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true
               },
-              "showPercentChange": false,
-              "textMode": "auto",
-              "wideLayout": true
+              "tooltip": {
+                "hideZeros": false,
+                "mode": "single",
+                "sort": "none"
+              }
             },
             "pluginVersion": "12.1.1",
             "targets": [
@@ -527,14 +572,14 @@ data:
                 "expr": "sum(kube_deployment_status_replicas_available{deployment=\"python-service\"})",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
-                "legendFormat": "__auto",
+                "legendFormat": "Active Replicas",
                 "range": true,
                 "refId": "A",
                 "useBackend": false
               }
             ],
             "title": "Active Replicas (Services)",
-            "type": "stat"
+            "type": "timeseries"
           },
           {
             "datasource": {
@@ -546,6 +591,39 @@ data:
                 "color": {
                   "fixedColor": "red",
                   "mode": "fixed"
+                },
+                "custom": {
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "insertNulls": false,
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
                 },
                 "mappings": [],
                 "thresholds": {
@@ -573,34 +651,30 @@ data:
             "id": 8,
             "interval": "5s",
             "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "percentChangeColorMode": "standard",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
+              "legend": {
+                "calcs": [],
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true
               },
-              "showPercentChange": false,
-              "textMode": "auto",
-              "wideLayout": true
+              "tooltip": {
+                "hideZeros": false,
+                "mode": "single",
+                "sort": "none"
+              }
             },
             "pluginVersion": "12.1.1",
             "targets": [
               {
                 "editorMode": "code",
                 "expr": "sum(kube_pod_status_phase{namespace=\"oris-predictive-autoscaler\", pod=~\"python-service.*\"})",
-                "legendFormat": "__auto",
+                "legendFormat": "Pod in All States",
                 "range": true,
                 "refId": "A"
               }
             ],
-            "title": "Total Pods Instanciated (Services)",
-            "type": "stat"
+            "title": "Total Pods Instantiated (Services)",
+            "type": "timeseries"
           },
           {
             "datasource": {
@@ -613,6 +687,39 @@ data:
                 "color": {
                   "fixedColor": "blue",
                   "mode": "fixed"
+                },
+                "custom": {
+                  "axisBorderShow": false,
+                  "axisCenteredZero": false,
+                  "axisColorMode": "text",
+                  "axisLabel": "",
+                  "axisPlacement": "auto",
+                  "barAlignment": 0,
+                  "barWidthFactor": 0.6,
+                  "drawStyle": "line",
+                  "fillOpacity": 0,
+                  "gradientMode": "none",
+                  "hideFrom": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": false
+                  },
+                  "insertNulls": false,
+                  "lineInterpolation": "linear",
+                  "lineWidth": 1,
+                  "pointSize": 5,
+                  "scaleDistribution": {
+                    "type": "linear"
+                  },
+                  "showPoints": "auto",
+                  "spanNulls": false,
+                  "stacking": {
+                    "group": "A",
+                    "mode": "none"
+                  },
+                  "thresholdsStyle": {
+                    "mode": "off"
+                  }
                 },
                 "mappings": [],
                 "thresholds": {
@@ -640,21 +747,17 @@ data:
             "id": 7,
             "interval": "5s",
             "options": {
-              "colorMode": "value",
-              "graphMode": "none",
-              "justifyMode": "auto",
-              "orientation": "auto",
-              "percentChangeColorMode": "standard",
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
+              "legend": {
+                "calcs": [],
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true
               },
-              "showPercentChange": false,
-              "textMode": "auto",
-              "wideLayout": true
+              "tooltip": {
+                "hideZeros": false,
+                "mode": "single",
+                "sort": "none"
+              }
             },
             "pluginVersion": "12.1.1",
             "targets": [
@@ -664,14 +767,14 @@ data:
                 "expr": "kube_deployment_status_replicas{deployment=\"python-service\", namespace=\"oris-predictive-autoscaler\"}",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
-                "legendFormat": "__auto",
+                "legendFormat": "K8s Target Replicas",
                 "range": true,
                 "refId": "A",
                 "useBackend": false
               }
             ],
-            "title": "Prescribed Replicas (Service)",
-            "type": "stat"
+            "title": "Target Replicas (Service)",
+            "type": "timeseries"
           }
         ],
         "preload": false,

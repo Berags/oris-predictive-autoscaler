@@ -46,8 +46,9 @@ public class K8sScaler {
         return namespace;
     }
 
-    public int getReplicas() {
-        return replicas;
+    public int getReplicas() throws ApiException{
+        V1Scale scale = appsApi.readNamespacedDeploymentScale(scaleName, namespace).execute();
+        return scale.getStatus().getReplicas();
     }
 
     public void setReplicas(int replicas) {
