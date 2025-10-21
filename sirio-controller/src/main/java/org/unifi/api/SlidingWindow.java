@@ -55,8 +55,9 @@ public class SlidingWindow extends AbstractUpdater{
             if (replicaHistory.size() == scalingDecisionWindow && replicaHistory.stream().allMatch(r -> r <= newReplicas)) {
                 System.out.println("\tScaling down condition met. Required replicas " + newReplicas + " has been consistent for the last " + scalingDecisionWindow + " iterations.");
                 //System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+                int maxInHistory = replicaHistory.stream().max(Integer::compareTo).orElse(newReplicas);
                 replicaHistory.clear(); // Clear history after scaling
-                return newReplicas;
+                return maxInHistory;
             } else {
                 System.out.println("\tWaiting for stable replica recommendations before scaling down. Current window size: " + replicaHistory.size() + "/" + scalingDecisionWindow);
             }
