@@ -1,17 +1,13 @@
 package org.unifi.api;
 
 import java.io.IOException;
-import java.util.Queue;
-import java.util.AbstractCollection;
-import java.util.Iterator;
-
-import org.apache.commons.collections4.queue.CircularFifoQueue;
-
+import java.util.ArrayList;
 import io.kubernetes.client.openapi.ApiException;
 
 public class SlidingWindow extends AbstractUpdater{
 
-    private Queue<Integer> history;
+    private ArrayList<Integer> replicaHistory;
+    private int scalingDecisionWindow;
 
     public SlidingWindow(int length) throws IOException {
         super();
@@ -27,35 +23,47 @@ public class SlidingWindow extends AbstractUpdater{
         if (length < 1) {
             length = 1;
         }
-        history = new CircularFifoQueue<Integer>(length);
+        replicaHistory = new ArrayList<Integer>();
+        this.scalingDecisionWindow = length;
     }
 
     @Override
-    public int applyLogic(int replicas) {
-        int current = 1;
-        history.add(replicas);
+    public int applyLogic(int newReplicas) {
+        int currentReplicas = 1;
         try{
-            current = scaler.getReplicas();
+            currentReplicas = scaler.getReplicas();
         }catch(ApiException ex){
-            if (history.size() > 0){
-                current = history.peek();
+            if (replicaHistory.size() > 0){
+                currentReplicas = replicaHistory.getLast();
             }
         }
-        if(replicas < current){
-            System.out.println("Verifying if scale down must occur.");
-            boolean goDown = true;
-            Iterator<Integer> it = history.iterator();
-            while(goDown && it.hasNext()){
-                if(it.next() >= current){
-                    System.out.println("Scale down aborted, a value in the history is greater than current.");
-                    goDown = false;
-                }
+
+        if (newReplicas > currentReplicas) {
+            // Scale up immediately
+            //System.out.println("Scaling up from " + currentReplicas + " to " + newReplicas);
+            //System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+            replicaHistory.clear(); // Clear history after scaling
+            return newReplicas;
+        } else if (newReplicas < currentReplicas) {
+            // Scale down lazily
+            replicaHistory.add(newReplicas);
+            if (replicaHistory.size() > scalingDecisionWindow) {
+                replicaHistory.remove(0);
             }
-            if (!goDown) {
-                replicas = current;
+            System.out.println("\tReplica recommendation history for scale-down: " + replicaHistory);
+
+            if (replicaHistory.size() == scalingDecisionWindow && replicaHistory.stream().allMatch(r -> r <= newReplicas)) {
+                System.out.println("\tScaling down condition met. Required replicas " + newReplicas + " has been consistent for the last " + scalingDecisionWindow + " iterations.");
+                //System.out.println("\nRequired scaling: " + scaler.getKind() + " '" + scaler.getScaleName() + "' -> replicas = " + scaler.getReplicas());
+                replicaHistory.clear(); // Clear history after scaling
+                return newReplicas;
+            } else {
+                System.out.println("\tWaiting for stable replica recommendations before scaling down. Current window size: " + replicaHistory.size() + "/" + scalingDecisionWindow);
             }
+        } else {
+            System.out.println("\tNo scaling needed.");
         }
-        return replicas;
+        return currentReplicas;
     }
     
 }

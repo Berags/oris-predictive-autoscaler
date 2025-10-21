@@ -37,15 +37,19 @@ class InterArrivalCollector:
         kafka_host = "kafka-service:9092"
         print(f"🔌 Initializing Kafka producer to {kafka_host}")
 
-        try:
-            self.kafka_producer = KafkaProducer(
-                bootstrap_servers=[kafka_host],
-                value_serializer=lambda v: json.dumps(v).encode('utf-8')
-            )
-            print("✅ Kafka producer successfully initialized")
-        except Exception as e:
-            print(f"❌ Failed to initialize Kafka producer: {str(e)}")
-            self.kafka_producer = None
+        self.kafka_producer = None
+        while(self.kafka_producer is None):
+            try:
+                self.kafka_producer = KafkaProducer(
+                    bootstrap_servers=[kafka_host],
+                    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+                )
+                print("✅ Kafka producer successfully initialized")
+            except Exception as e:
+                print(f"❌ Failed to initialize Kafka producer: {str(e)}")
+                self.kafka_producer = None
+                time.sleep(2)
+            
 
         # Setup signal handler for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
