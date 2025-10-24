@@ -5,21 +5,22 @@ import java.io.IOException;
 import io.kubernetes.client.openapi.ApiException;
 
 public abstract class AbstractUpdater {
+
     protected int min = 1;
     protected int max;
-    protected boolean unlimited  = true;
+    protected boolean unlimited = true;
     protected final K8sScaler scaler;
 
-    public AbstractUpdater() throws IOException{        
+    public AbstractUpdater() throws IOException {
         this.scaler = K8sScaler.getInstance();
-    } 
-    
-    public AbstractUpdater(int min, int max) throws IOException{        
+    }
+
+    public AbstractUpdater(int min, int max) throws IOException {
         this.scaler = K8sScaler.getInstance();
-        if (min < 0){
+        if (min < 0) {
             min = 1;
         }
-        if (min > max){
+        if (min > max) {
             max = min;
         }
         this.min = min;
@@ -27,7 +28,7 @@ public abstract class AbstractUpdater {
         unlimited = false;
     }
 
-    public int scaleWorkload(int replicas) throws ApiException{
+    public int scaleWorkload(int replicas) throws ApiException {
         int value = respectLimits(applyLogic(replicas));
         scaler.scaleWorkload(value);
         return value;
@@ -35,11 +36,11 @@ public abstract class AbstractUpdater {
 
     protected abstract int applyLogic(int replicas);
 
-    private int respectLimits(int replicas){
-        if(replicas < min){
+    private int respectLimits(int replicas) {
+        if (replicas < min) {
             replicas = min;
         }
-        if(!unlimited && replicas > max){
+        if (!unlimited && replicas > max) {
             replicas = max;
         }
         return replicas;

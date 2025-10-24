@@ -46,7 +46,7 @@ public class K8sScaler {
         return namespace;
     }
 
-    public int getReplicas() throws ApiException{
+    public int getReplicas() throws ApiException {
         V1Scale scale = appsApi.readNamespacedDeploymentScale(scaleName, namespace).execute();
         return scale.getStatus().getReplicas();
     }
@@ -130,9 +130,8 @@ public class K8sScaler {
             System.err.println("  Message: " + e.getMessage());
             System.err.println("  Response body: " + e.getResponseBody());
             throw e;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             System.err.println("Unexpected exception during scaling: " + e.getMessage());
-            e.printStackTrace();
             throw e;
         }
     }

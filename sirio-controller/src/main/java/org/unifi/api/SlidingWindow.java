@@ -2,9 +2,10 @@ package org.unifi.api;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
 import io.kubernetes.client.openapi.ApiException;
 
-public class SlidingWindow extends AbstractUpdater{
+public class SlidingWindow extends AbstractUpdater {
 
     private ArrayList<Integer> replicaHistory;
     private int scalingDecisionWindow;
@@ -19,21 +20,21 @@ public class SlidingWindow extends AbstractUpdater{
         createQueue(length);
     }
 
-    private void createQueue(int length){
+    private void createQueue(int length) {
         if (length < 1) {
             length = 1;
         }
-        replicaHistory = new ArrayList<Integer>();
+        replicaHistory = new ArrayList<>();
         this.scalingDecisionWindow = length;
     }
 
     @Override
     public int applyLogic(int newReplicas) {
         int currentReplicas = 1;
-        try{
+        try {
             currentReplicas = scaler.getReplicas();
-        }catch(ApiException ex){
-            if (replicaHistory.size() > 0){
+        } catch (ApiException ex) {
+            if (!replicaHistory.isEmpty()) {
                 currentReplicas = replicaHistory.getLast();
             }
         }
@@ -66,5 +67,5 @@ public class SlidingWindow extends AbstractUpdater{
         }
         return currentReplicas;
     }
-    
+
 }

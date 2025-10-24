@@ -51,7 +51,7 @@ public class Recommender {
     private int phases;
     private int timeout = 1_000;
 
-    public Recommender() throws IOException{
+    public Recommender() throws IOException {
         updater = new ImmediateUpdater();
     }
 
@@ -134,7 +134,7 @@ public class Recommender {
                 if (records.isEmpty()) {
                     try {
                         updater.scaleWorkload(1);
-                    } catch (Exception e) {
+                    } catch (ApiException e) {
                         System.err.println("Error while trying to scale: " + e.getMessage());
                     }
 
@@ -152,7 +152,7 @@ public class Recommender {
 
     }
 
-    public void setStrategy(AbstractUpdater updater){
+    public void setStrategy(AbstractUpdater updater) {
         this.updater = updater;
     }
 
@@ -224,7 +224,7 @@ public class Recommender {
         }
     }
 
-    public void setTimeout(int timeout){
+    public void setTimeout(int timeout) {
         this.timeout = Math.max(timeout, 0);
     }
 }
