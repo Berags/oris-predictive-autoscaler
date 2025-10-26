@@ -44,7 +44,7 @@ public class SlidingWindow extends AbstractUpdater {
             }
             System.out.println("\tReplica recommendation history for scale-down: " + replicaHistory);
 
-            if (replicaHistory.size() == scalingDecisionWindow
+            if (replicaHistory.size() >= scalingDecisionWindow
                     && replicaHistory.stream().allMatch(r -> r <= currentReplicas)) {
                 System.out.println("\tScaling down condition met. Required replicas " + newReplicas
                         + " has been consistent for the last " + scalingDecisionWindow + " iterations.");

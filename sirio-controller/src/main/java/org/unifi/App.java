@@ -3,6 +3,7 @@ package org.unifi;
 import java.io.IOException;
 import java.math.BigDecimal;
 
+import org.unifi.api.ImmediateUpdater;
 import org.unifi.api.SlidingWindow;
 import org.unifi.comunication.Recommender;
 import org.unifi.model.ExponentialServiceProcess;
@@ -18,12 +19,10 @@ public class App {
         try {
             kafkaConsumer = new Recommender();
             kafkaConsumer.autoConfig(queue, serviceProcess, new BigDecimal("0.05"));
-            // Set timeout to 15 seconds
-            // k8s default value to recalcuate metrics
-            kafkaConsumer.setTimeout(15_000);
+            kafkaConsumer.setTimeout(10_000);
 
-            // wait time window of 60s (4 intervals of 15s)
-            SlidingWindow updater = new SlidingWindow(4, 1, 25);
+            SlidingWindow updater = new SlidingWindow(10, 1, 25);
+            //ImmediateUpdater updater = new ImmediateUpdater(1, 25);
             kafkaConsumer.setStrategy(updater);
 
             kafkaConsumer.startConsuming();

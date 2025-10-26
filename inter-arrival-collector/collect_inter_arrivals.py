@@ -31,7 +31,7 @@ class InterArrivalCollector:
         
         # Configuration
         self.sample_size = 100          # Messages to peek each cycle
-        self.monitoring_interval = 5   # Seconds between samples
+        self.monitoring_interval = 5    # Seconds between samples
         
         # ✅ Kafka configuration
         kafka_host = "kafka-service:9092"

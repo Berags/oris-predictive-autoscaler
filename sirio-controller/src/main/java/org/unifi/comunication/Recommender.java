@@ -56,7 +56,6 @@ public class Recommender {
     }
 
     public void autoConfig(Queue q, ServiceProcess service, BigDecimal rejection) {
-
         this.queue = q;
         this.serviceProcess = service;
         this.rejectionTarget = rejection;
@@ -83,7 +82,7 @@ public class Recommender {
         // === ADDITIONAL CONFIGURATIONS ===
         properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
         properties.setProperty(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
-        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");  // ONE AT A TIME!
+        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");
         properties.setProperty(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "30000");
         properties.setProperty(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, "10000");
         properties.setProperty(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "40000");
@@ -120,7 +119,7 @@ public class Recommender {
         try {
             while (running) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(this.timeout));
-
+                System.out.println("\n Polled " + records.count() + " records.");
                 for (ConsumerRecord<String, String> record : records) {
                     System.out.println("\n===  NEW CDF MESSAGE ===");
                     System.out.println("Topic: " + record.topic());
