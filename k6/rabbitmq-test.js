@@ -56,7 +56,7 @@ const RABBITMQ_PASSWORD = __ENV.RABBITMQ_PASSWORD || "password";
 const QUEUE_NAME = "message-queue";
 
 const PARAM_ARRAY_JSON = __ENV.PARAM_ARRAY || "[3]"; // arrival rate per second
-const TEST_DURATION = __ENV.TEST_DURATION || "30s";
+const TEST_DURATION = __ENV.TEST_DURATION || "60s";
 const DISTRIBUTION = __ENV.DISTRIBUTION || "poisson"; // 'constant' or 'poisson'
 const AMQP_URL = `amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/`;
 
