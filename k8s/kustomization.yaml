@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Main kustomization file for ORIS Predictive Autoscaler
+# This file orchestrates all components of the application
+
+resources:
+  # Base namespace
+  - base
+  
+  # Third-party components (metrics-server)
+  - components
+  
+  # Messaging infrastructure (RabbitMQ, Kafka, Kafdrop)
+  - messaging
+  
+  # Observability stack (Prometheus, Grafana, kube-state-metrics)
+  - observability
+  
+  # Application services
+  - services
+  
+  # Autoscaling (HPA, Prometheus Adapter)
+  - autoscaling
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  project: oris-predictive-autoscaler
+
+# Namespace for all resources (except metrics-server which uses kube-system)
+namespace: oris-predictive-autoscaler

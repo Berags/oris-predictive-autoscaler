@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sirio-controller
+  namespace: oris-predictive-autoscaler
+  labels:
+    app: sirio-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sirio-controller
+  template:
+    metadata:
+      labels:
+        app: sirio-controller
+    spec:
+      serviceAccountName: sirio-controller
+      containers:
+      - name: sirio-controller
+        image: sirio-controller:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-service:9092"
+        - name: KAFKA_TOPIC
+          value: "inter-arrival-cdf"
+        - name: KAFKA_GROUP_ID
+          value: "sirio-controller-group"
+        resources:
+          limits:
+            memory: "1024Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          tcpSocket:
+            port: 9010
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 9010
+          initialDelaySeconds: 10
+          periodSeconds: 5
