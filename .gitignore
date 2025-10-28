@@ -13,4 +13,5 @@ Experiments/.ipynb_checkpoints
 Experiments/.virtual_documents
 Experiments/**/*.png
 
+**/.virtual_documents/
 .venv/
