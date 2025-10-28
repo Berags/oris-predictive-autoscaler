@@ -164,16 +164,28 @@ const distributionHandlers = {
         validParams.push([2, 3, 1]);
       }
 
+    
+      const phases = validParams.map(([k, lambda, weight]) => [k, lambda]);
+      const weights = validParams.map(([k, lambda, weight]) => weight);
+      
+      const weightSum = weights.reduce((sum, w) => sum + w, 0);
+      const normalizedWeights = weights.map(w => w / weightSum);
+      
+      const hyperErlangParams = [phases, normalizedWeights];
+      
+      console.log(`Phases: ${JSON.stringify(phases)}`);
+      console.log(`Weights: ${JSON.stringify(normalizedWeights)}`);
+
       rl.question(
         "Enter test duration [in seconds; default: 600]: ",
         (durationInput) => {
             let duration = parseInt(durationInput.trim()) || 600;
             console.log(`Test duration: ${duration} seconds`);
 
-            runK6Test(distributionType, erlangParams, duration);
+          
+            runK6Test(distributionType, [hyperErlangParams], duration);
           }
       );
-
     });
   },
   erlang: () => {
@@ -212,7 +224,7 @@ const distributionHandlers = {
             return lambda;
           }); */
 
-          const erlangParams = lambdaArray.map((lambda) => [k, lambda]);
+          let erlangParams = lambdaArray.map((lambda) => [k, lambda]);
 
           console.log(
             `Selected Erlang parameters: k=${k}, λ=[${lambdaArray.join(", ")}]`
@@ -308,11 +320,10 @@ const runK6Test = (distributionType, paramArray = [3], duration = 600) => {
       ` Parameters: λ=[${paramArray.join(", ")}], duration=${duration} seconds`
     );
   }else if (distributionType === "hypererlang") {
-    // Hyper Erlang: paramArray = [[k1, λ1, w1], [k2, λ2, w2], ...]
+    
+    const [phases, weights] = paramArray[0]; // Estrai phases e weights
     console.log(
-      ` Parameters: Hyper Erlang triplets=[${paramArray
-        .map((triplet) => `[k=${triplet[0]}, λ=${triplet[1]}, w=${triplet[2]}]`)
-        .join(", ")}], duration=${duration} seconds`
+      ` Parameters: Phases=${JSON.stringify(phases)}, Weights=${JSON.stringify(weights)}, duration=${duration} seconds`
     );
   }
 

@@ -10,36 +10,36 @@ import {
   computeCompensatedWaitMs,
 } from "./util/metrics.js";
 
-class DistributionFactory {
-  static #handlers = {
-    exponential: (params) => this.getExponential(params[0]),
-    poisson: (params) => this.getExponential(params[0]),
-    uniform: (params) => this.getUniform(...params[0]),
-    erlang: (params) => this.getErlang(...params[0]),
-    hypererlang: (params) => this.getHyperErlang(...params[0])
-  };
+const DistributionFactory = {
+  handlers: {
+    exponential: (params) => DistributionFactory.getExponential(params[0]),
+    poisson: (params) => DistributionFactory.getPoisson(params[0]),
+    uniform: (params) => DistributionFactory.getUniform(...params[0]),
+    erlang: (params) => DistributionFactory.getErlang(...params[0]),
+    hypererlang: (params) => DistributionFactory.getHyperErlang(...params[0])
+  },
 
-  static getFromType(type, ...params) {
-    const handler = this.#handlers[type.toLowerCase()];
+   getFromType(type, ...params) {
+    const handler = this.handlers[type.toLowerCase()];
     if (handler) {
       return handler(params);
     }
     throw new Error(`The given distribution type '${type}' is not supported`);
-  }
+  },
 
-  static getUniform(min, max) {
+   getUniform(min, max) {
     console.log(`Uniform distribution between ${min} and ${max}`);
     return () => probabilityDistributions.runif(1, min, max);
-  }
+  },
 
-  static getDeterministic(time) {
+   getDeterministic(time) {
     return () => time;
-  }
+  },
 
-  static getExponential(lambda) {
+   getExponential(lambda) {
     return () => probabilityDistributions.rexp(1, lambda);
-  }
-  static getErlang(k, lambda) {
+  },
+  getErlang(k, lambda) {
     return () => {
       let sum = 0;
       for (let i = 0; i < k; i++) {
@@ -47,9 +47,9 @@ class DistributionFactory {
       }
       return sum;
     };
-  }
-  static getHyperErlang(phases, weights) {
-    
+  },
+  getHyperErlang(phases, weights) {
+
     const weightSum = weights.reduce((sum, w) => sum + w, 0);
     if (Math.abs(weightSum - 1.0) > 0.001) {
         console.warn(`Warning: weights sum to ${weightSum}, normalizing to 1.0`);
