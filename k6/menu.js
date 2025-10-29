@@ -321,7 +321,7 @@ const runK6Test = (distributionType, paramArray = [3], duration = 600) => {
     );
   }else if (distributionType === "hypererlang") {
     
-    const [phases, weights] = paramArray[0]; // Estrai phases e weights
+    const [phases, weights] = paramArray[0]; // Extract phases and weights
     console.log(
       ` Parameters: Phases=${JSON.stringify(phases)}, Weights=${JSON.stringify(weights)}, duration=${duration} seconds`
     );
