@@ -224,7 +224,7 @@ const distributionHandlers = {
             return lambda;
           }); */
 
-          let erlangParams = lambdaArray.map((lambda) => [k, lambda]);
+          const erlangParams = lambdaArray.map((lambda) => [k, lambda]);
 
           console.log(
             `Selected Erlang parameters: k=${k}, λ=[${lambdaArray.join(", ")}]`
