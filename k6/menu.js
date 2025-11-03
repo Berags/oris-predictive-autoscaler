@@ -48,7 +48,8 @@ const showMenu = () => {
   console.log("2. Poisson (λ<100)");
   console.log("3. Uniform (Use min = max for deterministic)");
   console.log("4. Erlang (k, λ)");
-  console.log("5. Exit");
+  console.log("5. Hyper Erlang (k, λ, weight)");
+  console.log("6. Exit");
   console.log("----------------------------");
 };
 
@@ -152,6 +153,41 @@ const distributionHandlers = {
       }
     );
   },
+  hypererlang: () => {
+    const distributionType = "hypererlang";
+    console.log(`\nConfiguring ${distributionType} distribution test:`);
+    rl.question("Enter k (shape), lambda and weight values with the format k1, λ1, w1; k2, λ2, w2: ", (kInput) => {
+      const params = kInput.split(";").map((pair) => pair.split(",").map((val) => parseFloat(val.trim())));
+      const validParams = params.filter(([k, lambda, weight]) => !isNaN(k) && !isNaN(lambda) && !isNaN(weight));
+      if (validParams.length === 0) {
+        console.log("Invalid input. Using default: k=2, λ=3, w=1");
+        validParams.push([2, 3, 1]);
+      }
+
+    
+      const phases = validParams.map(([k, lambda, weight]) => [k, lambda]);
+      const weights = validParams.map(([k, lambda, weight]) => weight);
+      
+      const weightSum = weights.reduce((sum, w) => sum + w, 0);
+      const normalizedWeights = weights.map(w => w / weightSum);
+      
+      const hyperErlangParams = [phases, normalizedWeights];
+      
+      console.log(`Phases: ${JSON.stringify(phases)}`);
+      console.log(`Weights: ${JSON.stringify(normalizedWeights)}`);
+
+      rl.question(
+        "Enter test duration [in seconds; default: 600]: ",
+        (durationInput) => {
+            let duration = parseInt(durationInput.trim()) || 600;
+            console.log(`Test duration: ${duration} seconds`);
+
+          
+            runK6Test(distributionType, [hyperErlangParams], duration);
+          }
+      );
+    });
+  },
   erlang: () => {
     const distributionType = "erlang";
     console.log(`\nConfiguring ${distributionType} distribution test:`);
@@ -177,6 +213,7 @@ const distributionHandlers = {
               lambdaArray = [3];
             }
           }
+          /*
           lambdaArray = lambdaArray.map((lambda) => {
             if (lambda >= 100) {
               console.log(
@@ -185,7 +222,7 @@ const distributionHandlers = {
               return 99;
             }
             return lambda;
-          });
+          }); */
 
           const erlangParams = lambdaArray.map((lambda) => [k, lambda]);
 
@@ -231,7 +268,8 @@ const menuActions = {
     handler: () => getParameter("uniform"),
   },
   4: { name: "Erlang", handler: () => getParameter("erlang") },
-  5: {
+  5: { name: "Hyper Erlang", handler: () => getParameter("hyperErlang") },
+  6: {
     name: "Exit",
     handler: () => {
       console.log("Exiting program. Goodbye!");
@@ -280,6 +318,12 @@ const runK6Test = (distributionType, paramArray = [3], duration = 600) => {
     // Per Poisson/Exponential: paramArray = [λ1, λ2, ...]
     console.log(
       ` Parameters: λ=[${paramArray.join(", ")}], duration=${duration} seconds`
+    );
+  }else if (distributionType === "hypererlang") {
+    
+    const [phases, weights] = paramArray[0]; // Extract phases and weights
+    console.log(
+      ` Parameters: Phases=${JSON.stringify(phases)}, Weights=${JSON.stringify(weights)}, duration=${duration} seconds`
     );
   }
 

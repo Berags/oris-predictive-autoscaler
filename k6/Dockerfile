@@ -1,8 +1,8 @@
-FROM golang:1.24-alpine AS builder
+FROM  golang:1.23-alpine AS builder
 
 # Install git (required by xk6) and xk6
 RUN apk --no-cache add git
-RUN go install go.k6.io/xk6/cmd/xk6@latest
+RUN go install go.k6.io/xk6/cmd/xk6@v0.9.0
 
 # Build k6 with the AMQP extension
 RUN xk6 build --output /k6 --with github.com/grafana/xk6-amqp@latest
