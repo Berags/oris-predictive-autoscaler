@@ -43,5 +43,5 @@ jobs:
           file: ./sirio-controller/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: | 
-            ghcr.io/${{ lower(github.repository) }}/sirio-controller:latest
-            ghcr.io/${{ lower(github.repository) }}/sirio-controller:${{ github.sha }}
+            ghcr.io/berags/oris-predictive-autoscaler/sirio-controller:latest
+            ghcr.io/oris-predictive-autoscaler/sirio-controller:${{ github.sha }}
