@@ -1,0 +1,47 @@
+name: Build and Push sirio-controller
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B package --file sirio-controller/pom.xml
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./sirio-controller
+          file: ./sirio-controller/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: | 
+            ghcr.io/berags/oris-predictive-autoscaler/sirio-controller:latest
+            ghcr.io/berags/oris-predictive-autoscaler/sirio-controller:${{ github.sha }}
