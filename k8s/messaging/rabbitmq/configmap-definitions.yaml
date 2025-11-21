@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-definitions
+  namespace: oris-predictive-autoscaler
+  labels:
+    app: rabbitmq
+data:
+  definitions.json: |
+    {
+      "vhosts": [
+        { "name": "/" }
+      ],
+      "queues": [
+        {
+          "name": "message-queue",
+          "vhost": "/",
+          "arguments": {
+            "x-max-length": 100
+          }
+        }
+      ],
+      "users": [
+        {
+          "name": "admin",
+          "password": "password",
+          "tags": ["administrator"]
+        }
+      ],
+      "permissions": [
+        {
+          "user": "admin",
+          "vhost": "/",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        }
+      ]
+    }

@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: oris-predictive-autoscaler
+
+# Select which HPA configuration to use:
+# - hpa-cpu.yaml: CPU-based autoscaling
+# - hpa-rejection.yaml: Custom metric (rejection rate) based autoscaling
+resources:
+  # Uncomment one of the following:
+  # - hpa-cpu.yaml
+  - hpa-rejection.yaml
+
+commonLabels:
+  app.kubernetes.io/component: autoscaling

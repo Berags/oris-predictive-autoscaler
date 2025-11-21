@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: oris-predictive-autoscaler
+  labels:
+    app: rabbitmq
+data:
+  rabbitmq.conf: |
+    load_definitions = /etc/rabbitmq/definitions.json
+    log.console.level = info
+    prometheus.tcp.port = 15692
+    prometheus.return_per_object_metrics = true
+    collect_statistics_interval = 5000
+  enabled_plugins: |
+      [rabbitmq_management,rabbitmq_prometheus].
